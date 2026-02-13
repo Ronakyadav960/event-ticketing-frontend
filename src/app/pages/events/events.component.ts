@@ -3,7 +3,6 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { EventService } from '../../services/event.service';
-import { environment } from '../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -20,13 +19,9 @@ export class EventsComponent implements OnInit {
   error = '';
   events: any[] = [];
 
-  // UI state
   q = '';
   status: 'all' | 'upcoming' | 'past' | 'soldout' = 'all';
   sort: 'dateAsc' | 'dateDesc' | 'priceAsc' | 'priceDesc' = 'dateAsc';
-
-  // ✅ base url from environment (prod = Render, dev = localhost)
-  BASE = environment.apiUrl;
 
   ngOnInit(): void {
     this.fetchEvents();
@@ -47,15 +42,7 @@ export class EventsComponent implements OnInit {
   }
 
   imgUrl(e: any): string {
-    // ✅ If backend already provides imageUrl, use it (and replace old localhost if any)
-    const direct = e?.imageUrl;
-    if (direct && typeof direct === 'string') {
-      return direct.replace('http://localhost:5000', this.BASE);
-    }
-
-    // ✅ fallback build url from id
-    const id = e?._id || e?.id;
-    return id ? `${this.BASE}/api/events/${id}/image` : '';
+    return this.es.getEventImageUrl(e);
   }
 
   remainingSeats(e: any): number {
