@@ -1,0 +1,106 @@
+<div class="page">
+  
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-left">
+        <div class="pill">Discover • Book • Enjoy</div>
+        <h1>Book Your Next Event</h1>
+        <p class="sub">
+          Explore trending shows, concerts and experiences — posters, details and instant booking.
+        </p>
+
+        <div class="searchbar">
+          <input
+            class="search"
+            placeholder="Search events by title or venue…"
+            [(ngModel)]="q"
+          />
+          <button class="btn ghost" (click)="q=''">Clear</button>
+          <button class="btn" (click)="fetchEvents()">Refresh</button>
+        </div>
+
+        <div class="filters">
+          <select class="select" [(ngModel)]="status">
+            <option value="all">All</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="past">Past</option>
+            <option value="soldout">Sold Out</option>
+          </select>
+
+          <select class="select" [(ngModel)]="sort">
+            <option value="dateAsc">Date ↑</option>
+            <option value="dateDesc">Date ↓</option>
+            <option value="priceAsc">Price ↑</option>
+            <option value="priceDesc">Price ↓</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="hero-card">
+          <div class="hc-title">Today’s Picks</div>
+          <div class="hc-sub">Poster-first browsing, like premium ticketing apps</div>
+          <div class="hc-row">
+            <div class="hc-chip">High quality cards</div>
+            <div class="hc-chip">Fast search</div>
+            <div class="hc-chip">One-click booking</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- State -->
+  <div *ngIf="loading" class="state">Loading events…</div>
+  <div *ngIf="!loading && error" class="state error">❌ {{ error }}</div>
+
+  <!-- Grid -->
+  <section class="grid" *ngIf="!loading">
+    <div class="card" *ngFor="let e of filtered" (click)="openEvent(e)">
+      <div class="poster">
+        <img *ngIf="imgUrl(e); else noImg" [src]="imgUrl(e)" alt="poster" />
+        <ng-template #noImg>
+          <div class="noimg">No Image</div>
+        </ng-template>
+
+        <div class="badge"
+             [class.up]="statusOf(e)==='Upcoming'"
+             [class.past]="statusOf(e)==='Past'"
+             [class.so]="statusOf(e)==='Sold Out'">
+          {{ statusOf(e) }}
+        </div>
+      </div>
+
+      <div class="info">
+        <div class="title">{{ e.title }}</div>
+
+        <div class="meta">
+          <span class="dot">•</span>
+          <span>{{ e.venue || '-' }}</span>
+        </div>
+
+        <div class="meta2">
+          <span>{{ e.date | date:'mediumDate' }}</span>
+          <span class="sep">|</span>
+          <span>{{ e.date | date:'shortTime' }}</span>
+        </div>
+
+        <div class="bottom">
+          <div class="price">₹{{ e.price ?? 0 }}</div>
+          <div class="seats">
+            {{ remainingSeats(e) }} seats left
+          </div>
+        </div>
+
+        <button class="cta" type="button" (click)="$event.stopPropagation(); openEvent(e)">
+          View & Book
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="filtered.length === 0" class="empty">
+      No events found. Try changing filters.
+    </div>
+  </section>
+</div>

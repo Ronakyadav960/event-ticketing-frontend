@@ -1,0 +1,55 @@
+<nav class="navbar">
+  <div class="logo" (click)="go('/events')">🎟 Event Booking</div>
+
+  <div class="nav-links">
+    <!-- Events button: login page par hide -->
+    <span
+      class="link"
+      *ngIf="!isLoginPage"
+      (click)="go('/events')"
+    >
+      Events
+    </span>
+
+    <div class="right">
+      <!-- Logout → Login -->
+      <button
+        class="logout-btn"
+        *ngIf="isLoginPage"
+        (click)="go('/login')"
+      >
+        Login
+      </button>
+
+      <button
+        class="logout-btn"
+        *ngIf="!isLoginPage"
+        (click)="logout()"
+      >
+        Logout
+      </button>
+    </div>
+
+    <!-- Admin only -->
+    <span
+      *ngIf="auth.isAdmin() && !isLoginPage"
+      class="link"
+      (click)="go('/create-event')"
+    >
+      Create
+    </span>
+
+    <!-- Admin only -->
+    <span
+      *ngIf="auth.isAdmin() && !isLoginPage"
+      class="link"
+      (click)="go('/dashboard')"
+    >
+      Dashboard
+    </span>
+  </div>
+</nav>
+
+<div class="container">
+  <router-outlet></router-outlet>
+</div>

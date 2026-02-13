@@ -1,0 +1,63 @@
+.navbar{
+  height: 56px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 0 16px;
+  background:#111827;
+  color:#fff;
+  position: sticky;
+  top:0;
+  z-index: 9999;
+}
+
+.logo{
+  font-weight:700;
+  cursor:pointer;
+  user-select:none;
+}
+
+.nav-links{
+  display:flex;
+  gap:10px;
+}
+
+.link{
+  color:#fff;
+  padding:6px 10px;
+  border-radius:10px;
+  background: rgba(255,255,255,0.08);
+  display:inline-flex;
+  align-items:center;
+  cursor:pointer;
+  user-select:none;
+}
+
+.link:hover{
+  background: rgba(255,255,255,0.14);
+}
+
+.container{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+}
+.app-header{
+  height: 56px;
+  background: #0b0f17;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.logout-btn{
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  background: #ef4444;
+  color: #fff;
+  font-weight: 600;
+}

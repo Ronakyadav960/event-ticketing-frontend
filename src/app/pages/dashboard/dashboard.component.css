@@ -1,0 +1,23 @@
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logout-btn {
+  background: #dc3545;
+  border: none;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 6px;
+}
+
+.dashboard-card {
+  border-radius: 12px;
+  transition: 0.3s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+}

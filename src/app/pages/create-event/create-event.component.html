@@ -1,0 +1,151 @@
+<div class="create-wrapper">
+  <div class="create-card">
+
+    <div class="header">
+      <div class="badge">{{ isEdit ? 'Edit' : 'Create' }}</div>
+      <h3 class="title">{{ isEdit ? 'Edit Event' : 'Create New Event' }}</h3>
+      <p class="subtitle">
+        Fill details and {{ isEdit ? 'update your event' : 'publish your next big event' }}.
+      </p>
+    </div>
+
+    <div *ngIf="successMessage" class="success-box">✅ {{ successMessage }}</div>
+    <div *ngIf="errorMessage" class="error-box">❌ {{ errorMessage }}</div>
+
+    <form (ngSubmit)="submit()" #f="ngForm">
+
+      <div class="form-group">
+        <label>Event Title</label>
+        <input
+          class="form-control"
+          [(ngModel)]="title"
+          name="title"
+          required
+          placeholder="e.g., Music Night"
+        />
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <textarea
+          class="form-control"
+          [(ngModel)]="description"
+          name="description"
+          rows="4"
+          placeholder="Write a short event description..."
+        ></textarea>
+      </div>
+
+      <!-- IMAGE UPLOAD -->
+      <div class="form-group">
+        <label>Event Photo</label>
+        <input
+          type="file"
+          class="form-control"
+          accept="image/png,image/jpeg,image/webp"
+          (change)="onFileSelected($event)"
+        />
+
+        <!-- Preview -->
+        <div style="margin-top:10px" *ngIf="imagePreviewUrl">
+          <div style="font-size:12px; opacity:.8; margin-bottom:6px;">Preview</div>
+          <img
+            [src]="imagePreviewUrl"
+            alt="preview"
+            style="max-width: 100%; height: auto; border-radius: 10px;"
+          />
+        </div>
+
+        <!-- Existing -->
+        <div style="margin-top:10px" *ngIf="!imagePreviewUrl && existingImageUrl">
+          <div style="font-size:12px; opacity:.8; margin-bottom:6px;">Current Photo</div>
+          <img
+            [src]="getImageUrl(existingImageUrl)"
+            alt="current"
+            style="max-width: 100%; height: auto; border-radius: 10px;"
+          />
+        </div>
+
+        <div class="hint" style="margin-top:8px">
+          Allowed: JPG/PNG/WEBP • Max 5MB
+        </div>
+      </div>
+
+      <!-- DATE -->
+      <div class="form-group">
+        <label>Date & Time</label>
+        <input
+          type="datetime-local"
+          class="form-control"
+          [(ngModel)]="date"
+          name="date"
+          required
+          [min]="minDateTimeLocal"
+        />
+
+        <div *ngIf="datePreview" class="date-preview">
+          <div class="dp-item">
+            <span class="dp-label">Date</span>
+            <span class="dp-value">{{ datePreview.dateText }}</span>
+          </div>
+          <div class="dp-item">
+            <span class="dp-label">Time</span>
+            <span class="dp-value">{{ datePreview.timeText }}</span>
+          </div>
+        </div>
+
+        <div class="hint">
+          Past date/time not allowed.
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Venue</label>
+          <input
+            class="form-control"
+            [(ngModel)]="venue"
+            name="venue"
+            required
+            placeholder="e.g., City Hall"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Price (₹)</label>
+          <input
+            type="number"
+            class="form-control"
+            [(ngModel)]="price"
+            name="price"
+            min="0"
+            required
+            placeholder="0"
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Total Seats</label>
+        <input
+          type="number"
+          class="form-control"
+          [(ngModel)]="totalSeats"
+          name="totalSeats"
+          min="1"
+          required
+          placeholder="e.g., 150"
+        />
+      </div>
+
+      <button
+        type="submit"
+        class="btn create-btn w-100"
+        [disabled]="f.invalid || loading"
+      >
+        {{ loading ? '⏳ Please wait...' : (isEdit ? '💾 Update Event' : '🚀 Publish Event') }}
+      </button>
+
+    </form>
+  </div>
+</div>
