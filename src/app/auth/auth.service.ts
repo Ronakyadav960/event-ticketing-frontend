@@ -16,8 +16,8 @@ export interface User {
   providedIn: 'root'
 })
 export class AuthService {
-  // ✅ base api url from env
-  private apiUrl = `${environment.apiUrl}/api/auth`;
+  // ✅ Always use env base URL (prod = Render, dev = localhost)
+  private readonly apiUrl = `${environment.apiUrl}/api/auth`;
 
   private readonly TOKEN_KEY = 'token';
   private readonly USER_KEY = 'user';
@@ -30,17 +30,17 @@ export class AuthService {
   // 🔐 LOGIN
   login(email: string, password: string) {
     return this.http.post<{ token: string; user: User }>(`${this.apiUrl}/login`, {
-      email,
-      password
+      email: (email || '').trim().toLowerCase(),
+      password: (password || '').trim(),
     });
   }
 
   // 📝 REGISTER
   register(name: string, email: string, password: string) {
     return this.http.post<{ message: string; user: User }>(`${this.apiUrl}/register`, {
-      name,
-      email,
-      password
+      name: (name || '').trim(),
+      email: (email || '').trim().toLowerCase(),
+      password: (password || '').trim(),
     });
   }
 
