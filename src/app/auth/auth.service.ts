@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 
-import { environment } from '../../environments/environment.prod';
+import { environment } from '../../environments/environment';
 
 export interface User {
   id?: string;         // backend sends id
