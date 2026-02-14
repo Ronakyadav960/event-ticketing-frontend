@@ -11,13 +11,15 @@
         </p>
 
         <div class="searchbar">
+           
+      
           <input
             class="search"
             placeholder="Search events by title or venue…"
             [(ngModel)]="q"
           />
           <button class="btn ghost" (click)="q=''">Clear</button>
-          <button class="btn" (click)="fetchEvents()">Refresh</button>
+         
         </div>
 
         <div class="filters">
@@ -34,18 +36,6 @@
             <option value="priceAsc">Price ↑</option>
             <option value="priceDesc">Price ↓</option>
           </select>
-        </div>
-      </div>
-
-      <div class="hero-right">
-        <div class="hero-card">
-          <div class="hc-title">Today’s Picks</div>
-          <div class="hc-sub">Poster-first browsing, like premium ticketing apps</div>
-          <div class="hc-row">
-            <div class="hc-chip">High quality cards</div>
-            <div class="hc-chip">Fast search</div>
-            <div class="hc-chip">One-click booking</div>
-          </div>
         </div>
       </div>
     </div>

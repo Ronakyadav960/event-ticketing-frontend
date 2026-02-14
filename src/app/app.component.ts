@@ -1,47 +1,75 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import {
+  Router,
+  RouterOutlet,
+  NavigationEnd
+} from '@angular/router';
+import { filter, Subject, takeUntil } from 'rxjs';
 import { AuthService } from './auth/auth.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet],
+  imports: [
+    CommonModule,
+    RouterOutlet
+  ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent {
+export class AppComponent implements OnDestroy {
+
   private router = inject(Router);
+  private destroy$ = new Subject<void>();
+
   auth = inject(AuthService);
 
-  // ✅ NEW: login page detection
   isLoginPage = false;
 
   constructor() {
     this.router.events
-      .pipe(filter((event) => event instanceof NavigationEnd))
-      .subscribe((event) => {
-        const e = event as NavigationEnd;
-        this.isLoginPage = e.urlAfterRedirects.includes('/login');
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((event: NavigationEnd) => {
+        this.isLoginPage = event.urlAfterRedirects.includes('/login');
       });
   }
 
-  // navigate helper (already used)
-  go(path: string) {
+  // ✅ Safe navigation helper
+  go(path: string): void {
+    if (!path) return;
     this.router.navigateByUrl(path);
   }
 
-  // ✅ logout for top navbar
+  // ✅ Proper logout handler
   logout(): void {
-    this.auth.logout(); // remove token / user data
-    this.router.navigate(['/login']);
+    try {
+      this.auth.logout();
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      this.router.navigate(['/login']);
+    }
   }
 
-  // optional: show logout only when logged in
+  // ✅ Strong login detection
   get isLoggedIn(): boolean {
-    return this.auth.isLoggedIn
-      ? this.auth.isLoggedIn()
-      : !!localStorage.getItem('token');
+    try {
+      if (typeof this.auth.isLoggedIn === 'function') {
+        return this.auth.isLoggedIn();
+      }
+      return !!localStorage.getItem('token');
+    } catch {
+      return false;
+    }
+  }
+
+  // ✅ Prevent memory leaks
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

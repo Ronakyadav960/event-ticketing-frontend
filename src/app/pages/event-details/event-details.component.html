@@ -1,0 +1,55 @@
+<div class="event-bg" [ngStyle]="bgStyle">
+  <div class="overlay"></div>
+
+  <div class="content">
+    <div class="details-wrap">
+
+      <div *ngIf="loading" class="msg">Loading event...</div>
+      <div *ngIf="error" class="msg error">{{ error }}</div>
+
+      <div *ngIf="event">
+        <h2 class="title">{{ event.title }}</h2>
+        <p class="muted">
+          {{ event.venue }} | {{ event.date | date: 'medium' }}
+        </p>
+
+        <div class="card">
+          <h3>🎟 Book Tickets</h3>
+
+          <div *ngIf="msg" class="msg ok">{{ msg }}</div>
+
+          <form (ngSubmit)="book()" #f="ngForm">
+            <input
+              type="text"
+              placeholder="Name"
+              [(ngModel)]="name"
+              name="name"
+              required
+            />
+
+            <input
+              type="email"
+              placeholder="Email"
+              [(ngModel)]="email"
+              name="email"
+              required
+            />
+
+            <input
+              type="number"
+              placeholder="Seats"
+              [(ngModel)]="seats"
+              name="seats"
+              min="1"
+              required
+            />
+
+            <button [disabled]="f.invalid || submitting">
+              {{ submitting ? 'Redirecting...' : 'Proceed to Payment' }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

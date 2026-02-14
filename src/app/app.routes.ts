@@ -1,5 +1,4 @@
-// src/app/app-routing.module.ts ✅ UPDATED (Stripe success / cancel routes added)
-// ✅ Existing routes untouched, only minimal additions
+// src/app/app.routes.ts  (Standalone Angular Routing)
 
 import { Routes } from '@angular/router';
 
@@ -11,16 +10,16 @@ import { EventDetailsComponent } from './pages/event-details/event-details.compo
 import { CreateEventComponent } from './pages/create-event/create-event.component';
 import { BookingConfirmationComponent } from './pages/booking-confirmation/booking-confirmation.component';
 
-import { authGuard } from './auth/auth-guard';
-import { adminGuard } from './guards/admin.guard';
-
 import { AdminDashboardComponent } from './admin/admin-dashboard.component';
 
-// ✅ NEW: Stripe result pages (will be created)
 import { PaymentSuccessComponent } from './pages/payment-success/payment-success.component';
 import { PaymentCancelComponent } from './pages/payment-cancel/payment-cancel.component';
 
+import { authGuard } from './auth/auth-guard';
+import { adminGuard } from './guards/admin.guard';
+
 export const routes: Routes = [
+
   // ---------- AUTH ----------
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
@@ -30,21 +29,18 @@ export const routes: Routes = [
   { path: 'events', component: EventsComponent, canActivate: [authGuard] },
   { path: 'events/:id', component: EventDetailsComponent, canActivate: [authGuard] },
 
-  // ✅ Stripe redirects back here
   { path: 'payment-success', component: PaymentSuccessComponent, canActivate: [authGuard] },
   { path: 'payment-cancel', component: PaymentCancelComponent, canActivate: [authGuard] },
 
-  // ✅ Booking confirmation (after webhook creates booking)
   { path: 'booking/:ticketId', component: BookingConfirmationComponent, canActivate: [authGuard] },
 
-  // ---------- ADMIN PORTAL ----------
+  // ---------- ADMIN ----------
   {
     path: 'dashboard',
     component: AdminDashboardComponent,
     canActivate: [authGuard, adminGuard],
   },
 
-  // keep old route working
   { path: 'admin-dashboard', redirectTo: 'dashboard', pathMatch: 'full' },
 
   {
@@ -54,5 +50,6 @@ export const routes: Routes = [
   },
 
   // ---------- FALLBACK ----------
-  { path: '**', redirectTo: 'events' },
+  { path: '**', redirectTo: 'events' }
+
 ];

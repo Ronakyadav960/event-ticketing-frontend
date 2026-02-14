@@ -22,12 +22,11 @@ export class PaymentSuccessComponent implements OnInit, OnDestroy {
 
   error = '';
 
-  // ✅ set your backend base url OR use environment.ts
-  private API_BASE = 'http://localhost:5000/api';
+  // ✅ PRODUCTION BACKEND URL
+  private API_BASE = 'https://event-ticketing-backend-1.onrender.com/api';
 
-  // polling control
   private tries = 0;
-  private maxTries = 12; // 12 * 1s = ~12 sec
+  private maxTries = 12;
   private timer: any = null;
 
   ngOnInit(): void {
@@ -47,13 +46,15 @@ export class PaymentSuccessComponent implements OnInit, OnDestroy {
 
   private pollForTicket(sessionId: string) {
     this.http
-      .get<{ success: boolean; status: string; ticketId?: string; message?: string }>(
-        `${this.API_BASE}/payments/stripe/session/${sessionId}`
-      )
+      .get<{
+        success: boolean;
+        status: string;
+        ticketId?: string;
+        message?: string;
+      }>(`${this.API_BASE}/payments/stripe/session/${sessionId}`)
       .subscribe({
         next: (res) => {
           if (res?.success && res.status === 'READY' && res.ticketId) {
-            // ✅ YOUR confirmation route is: /booking/:ticketId
             this.router.navigate(['/booking', res.ticketId]);
             return;
           }
@@ -63,18 +64,14 @@ export class PaymentSuccessComponent implements OnInit, OnDestroy {
             return;
           }
 
-          // NOT_FOUND or unexpected
           this.error = res?.message || 'Unable to finalize booking.';
           this.timer = setTimeout(() => this.router.navigate(['/events']), 2000);
         },
-        error: (err) => {
-          // if server temporarily not ready, keep retrying a few times
-          const msg = err?.error?.message || 'Server error while finalizing booking.';
-          // Retry a bit before showing hard error
+        error: () => {
           if (this.tries < this.maxTries) {
             this.retry(sessionId);
           } else {
-            this.error = msg;
+            this.error = 'Server error while finalizing booking.';
             this.timer = setTimeout(() => this.router.navigate(['/events']), 2000);
           }
         }
@@ -83,11 +80,14 @@ export class PaymentSuccessComponent implements OnInit, OnDestroy {
 
   private retry(sessionId: string) {
     this.tries += 1;
+
     if (this.tries >= this.maxTries) {
-      this.error = 'Booking is taking longer than expected. Please check your bookings.';
+      this.error =
+        'Booking is taking longer than expected. Please check your bookings.';
       this.timer = setTimeout(() => this.router.navigate(['/events']), 2000);
       return;
     }
+
     this.timer = setTimeout(() => this.pollForTicket(sessionId), 1000);
   }
 }

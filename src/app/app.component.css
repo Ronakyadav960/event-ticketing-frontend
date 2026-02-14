@@ -1,63 +1,100 @@
-.navbar{
+/* ================= NAVBAR ================= */
+
+.navbar {
   height: 56px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding: 0 16px;
-  background:#111827;
-  color:#fff;
-  position: sticky;
-  top:0;
-  z-index: 9999;
-}
-
-.logo{
-  font-weight:700;
-  cursor:pointer;
-  user-select:none;
-}
-
-.nav-links{
-  display:flex;
-  gap:10px;
-}
-
-.link{
-  color:#fff;
-  padding:6px 10px;
-  border-radius:10px;
-  background: rgba(255,255,255,0.08);
-  display:inline-flex;
-  align-items:center;
-  cursor:pointer;
-  user-select:none;
-}
-
-.link:hover{
-  background: rgba(255,255,255,0.14);
-}
-
-.container{
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 16px;
-}
-.app-header{
-  height: 56px;
-  background: #0b0f17;
-  color: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 20px;
+  background: #111827;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 9999;
 }
 
-.logout-btn{
+/* Logo */
+.logo {
+  font-weight: 700;
+  font-size: 18px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Nav Links Container */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 16px; /* spacing between Events, Create, Dashboard */
+}
+
+/* Normal Link */
+.link {
+  color: #fff;
   padding: 6px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s ease;
+}
+
+.link:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* Active Page Highlight */
+.link.active {
+  background: #813baa;
+  color: #fff;
+}
+
+/* Right Section (Login/Logout) */
+.right {
+  display: flex;
+  align-items: center;
+  gap: 14px; /* spacing between Dashboard and Logout */
+  margin-left: 10px;
+}
+
+/* Logout Button */
+.logout-btn {
+  padding: 6px 16px;
   border-radius: 20px;
   border: none;
   cursor: pointer;
   background: #ef4444;
   color: #fff;
   font-weight: 600;
+  transition: 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: #dc2626;
+}
+
+/* Login Button (optional styling same as logout) */
+.login-btn {
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  background: #3b82f6;
+  color: #fff;
+  font-weight: 600;
+  transition: 0.3s ease;
+}
+
+.login-btn:hover {
+  background: #2563eb;
+}
+
+/* ================= PAGE CONTAINER ================= */
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px;
 }
