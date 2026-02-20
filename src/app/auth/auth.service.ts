@@ -5,18 +5,19 @@ import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 
 export interface User {
-  id?: string;         // backend sends id
-  _id?: string;        // sometimes mongo sends _id
+  id?: string;
+  _id?: string;
   name: string;
   email: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'creator' | 'superadmin';
+  isVerified?: boolean;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  // ✅ Always use env base URL (prod = Render, dev = localhost)
+
   private readonly apiUrl = `${environment.apiUrl}/api/auth`;
 
   private readonly TOKEN_KEY = 'token';
@@ -29,19 +30,26 @@ export class AuthService {
 
   // 🔐 LOGIN
   login(email: string, password: string) {
-    return this.http.post<{ token: string; user: User }>(`${this.apiUrl}/login`, {
-      email: (email || '').trim().toLowerCase(),
-      password: (password || '').trim(),
-    });
+    return this.http.post<{ token: string; user: User }>(
+      `${this.apiUrl}/login`,
+      {
+        email: (email || '').trim().toLowerCase(),
+        password: (password || '').trim(),
+      }
+    );
   }
 
   // 📝 REGISTER
-  register(name: string, email: string, password: string) {
-    return this.http.post<{ message: string; user: User }>(`${this.apiUrl}/register`, {
-      name: (name || '').trim(),
-      email: (email || '').trim().toLowerCase(),
-      password: (password || '').trim(),
-    });
+  register(name: string, email: string, password: string, role: string) {
+    return this.http.post<{ message: string; user: User }>(
+      `${this.apiUrl}/register`,
+      {
+        name: (name || '').trim(),
+        email: (email || '').trim().toLowerCase(),
+        password: (password || '').trim(),
+        role
+      }
+    );
   }
 
   // 💾 SAVE LOGIN DATA
@@ -66,14 +74,25 @@ export class AuthService {
     return user ? (JSON.parse(user) as User) : null;
   }
 
-  // 🛡️ CHECK IF ADMIN
-  isAdmin(): boolean {
-    return this.getUser()?.role === 'admin';
-  }
-
   // ✅ CHECK LOGIN
   isLoggedIn(): boolean {
     return !!this.getToken();
+  }
+
+  // =========================
+  // 🛡️ ROLE CHECK METHODS
+  // =========================
+
+  isUser(): boolean {
+    return this.getUser()?.role === 'user';
+  }
+
+  isCreator(): boolean {
+    return this.getUser()?.role === 'creator';
+  }
+
+  isSuperAdmin(): boolean {
+    return this.getUser()?.role === 'superadmin';
   }
 
   // 🚪 LOGOUT

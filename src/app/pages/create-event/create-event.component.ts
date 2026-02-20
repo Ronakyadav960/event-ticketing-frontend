@@ -14,6 +14,7 @@ import { environment } from '../../../environments/environment';
   styleUrls: ['./create-event.component.css'],
 })
 export class CreateEventComponent implements OnInit {
+
   private es = inject(EventService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -24,12 +25,11 @@ export class CreateEventComponent implements OnInit {
 
   title = '';
   description = '';
-  date = ''; // datetime-local string
+  date = '';
   venue = '';
   price = 0;
   totalSeats = 1;
 
-  // image upload
   selectedFile: File | null = null;
   imagePreviewUrl: string | null = null;
   existingImageUrl: string | null = null;
@@ -38,31 +38,38 @@ export class CreateEventComponent implements OnInit {
   successMessage = '';
   errorMessage = '';
 
+  // =============================
+  // INIT
+  // =============================
   ngOnInit(): void {
-    if (!this.auth.isAdmin()) {
+
+    if (!this.auth.isCreator() && !this.auth.isSuperAdmin()) {
       this.router.navigate(['/events']);
       return;
     }
 
-    const qpId = this.route.snapshot.queryParamMap.get('id');
-    const pmId = this.route.snapshot.paramMap.get('id');
-    this.eventId = qpId || pmId;
-
-    if (this.eventId) {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
       this.isEdit = true;
-      this.loadEvent(this.eventId);
+      this.eventId = id;
+      this.loadEvent(id);
     }
   }
 
-  // ✅ for image URL (no localhost)
+  // =============================
+  // IMAGE URL FIX (for prod/local)
+  // =============================
   getImageUrl(path: string | null): string {
     if (!path) return '';
     if (path.startsWith('http')) return path;
+
     const clean = path.startsWith('/') ? path.substring(1) : path;
     return `${environment.apiUrl}/${clean}`;
   }
 
-  // ✅ min datetime for input
+  // =============================
+  // MIN DATE
+  // =============================
   get minDateTimeLocal(): string {
     const d = new Date();
     d.setSeconds(0, 0);
@@ -70,7 +77,9 @@ export class CreateEventComponent implements OnInit {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
-  // ✅ THIS WAS MISSING → build error fix
+  // =============================
+  // DATE PREVIEW
+  // =============================
   get datePreview(): { dateText: string; timeText: string } | null {
     if (!this.date) return null;
     const d = new Date(this.date);
@@ -91,100 +100,69 @@ export class CreateEventComponent implements OnInit {
     return { dateText, timeText };
   }
 
-  private isPastSelectedDate(): boolean {
-    if (!this.date) return true;
-    const selected = new Date(this.date);
-    if (isNaN(selected.getTime())) return true;
-    return selected.getTime() < Date.now();
-  }
-
+  // =============================
+  // FILE SELECT
+  // =============================
   onFileSelected(evt: Event): void {
-    this.errorMessage = '';
-
     const input = evt.target as HTMLInputElement;
-    const file = input?.files?.[0] || null;
+    const file = input?.files?.[0];
 
-    if (!file) {
-      this.selectedFile = null;
-      this.imagePreviewUrl = null;
-      return;
-    }
-
-    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowed.includes(file.type)) {
-      this.selectedFile = null;
-      this.imagePreviewUrl = null;
-      input.value = '';
-      this.errorMessage = 'Only JPG, PNG, or WEBP images are allowed.';
-      return;
-    }
-
-    const maxBytes = 5 * 1024 * 1024;
-    if (file.size > maxBytes) {
-      this.selectedFile = null;
-      this.imagePreviewUrl = null;
-      input.value = '';
-      this.errorMessage = 'Image must be 5MB or less.';
-      return;
-    }
+    if (!file) return;
 
     this.selectedFile = file;
 
     const reader = new FileReader();
-    reader.onload = () => (this.imagePreviewUrl = String(reader.result));
+    reader.onload = () => this.imagePreviewUrl = reader.result as string;
     reader.readAsDataURL(file);
   }
 
+  // =============================
+  // LOAD EVENT (EDIT MODE)
+  // =============================
   loadEvent(id: string) {
     this.loading = true;
-    this.errorMessage = '';
 
-    this.es.getAdminEventById(id).subscribe({
-      next: (event: any) => {
-        const ev = event?.event ?? event?.data ?? event;
-
-        this.title = ev?.title || '';
-        this.description = ev?.description || '';
-        this.date = ev?.date ? String(ev.date).slice(0, 16) : '';
-        this.venue = ev?.venue || '';
-        this.price = Number(ev?.price ?? 0);
-        this.totalSeats = Number(ev?.totalSeats ?? 1);
-
-        // ✅ image field (use ev.image; fallback for old keys)
-        this.existingImageUrl = ev?.image || ev?.imageUrl || null;
+    this.es.getEventById(id).subscribe({
+      next: (ev: any) => {
+        this.title = ev.title || '';
+        this.description = ev.description || '';
+        this.date = ev.date ? ev.date.slice(0, 16) : '';
+        this.venue = ev.venue || '';
+        this.price = ev.price || 0;
+        this.totalSeats = ev.totalSeats || 1;
+        this.existingImageUrl = ev.imageUrl || null;
       },
-      error: () => (this.errorMessage = 'Event load failed.'),
-      complete: () => (this.loading = false),
+      error: () => this.errorMessage = 'Failed to load event',
+      complete: () => this.loading = false
     });
   }
 
+  // =============================
+  // SUBMIT
+  // =============================
   submit(): void {
-    if (!this.auth.isAdmin()) {
+
+    if (!this.auth.isCreator() && !this.auth.isSuperAdmin()) {
       this.router.navigate(['/events']);
       return;
     }
 
-    this.successMessage = '';
     this.errorMessage = '';
+    this.successMessage = '';
 
-    if (!this.title.trim()) return void (this.errorMessage = 'Title is required.');
-    if (!this.venue.trim()) return void (this.errorMessage = 'Venue is required.');
-    if (!this.date) return void (this.errorMessage = 'Date & time is required.');
-    if (this.isPastSelectedDate()) return void (this.errorMessage = 'Past date/time is not allowed.');
-    if (Number(this.totalSeats) < 1) return void (this.errorMessage = 'Total seats must be at least 1.');
-    if (Number(this.price) < 0) return void (this.errorMessage = 'Price cannot be negative.');
+    if (!this.title.trim()) { this.errorMessage = 'Title required'; return; }
+    if (!this.venue.trim()) { this.errorMessage = 'Venue required'; return; }
+    if (!this.date) { this.errorMessage = 'Date required'; return; }
+    if (this.totalSeats < 1) { this.errorMessage = 'Seats must be >= 1'; return; }
+    if (this.price < 0) { this.errorMessage = 'Price cannot be negative'; return; }
 
     const fd = new FormData();
     fd.append('title', this.title.trim());
-    fd.append('description', this.description?.trim() || '');
+    fd.append('description', this.description.trim());
     fd.append('date', new Date(this.date).toISOString());
     fd.append('venue', this.venue.trim());
-    fd.append('price', String(Number(this.price)));
-    fd.append('totalSeats', String(Number(this.totalSeats)));
-
-    if (!this.isEdit) {
-      fd.append('bookedSeats', '0');
-    }
+    fd.append('price', String(this.price));
+    fd.append('totalSeats', String(this.totalSeats));
 
     if (this.selectedFile) {
       fd.append('image', this.selectedFile);
@@ -193,23 +171,31 @@ export class CreateEventComponent implements OnInit {
     this.loading = true;
 
     if (this.isEdit && this.eventId) {
-      this.es.updateAdminEvent(this.eventId, fd).subscribe({
+
+      this.es.updateEvent(this.eventId, fd).subscribe({
         next: () => {
-          this.successMessage = 'Event updated!';
-          setTimeout(() => this.router.navigate(['/dashboard']), 600);
+          this.successMessage = 'Event Updated Successfully';
+          setTimeout(() => this.router.navigate(['/dashboard']), 800);
         },
-        error: () => (this.errorMessage = 'Update failed.'),
-        complete: () => (this.loading = false),
+        error: err => {
+          this.errorMessage = err?.error?.message || 'Update failed';
+        },
+        complete: () => this.loading = false
       });
+
     } else {
+
       this.es.createEvent(fd).subscribe({
         next: () => {
-          this.successMessage = 'Event created!';
-          setTimeout(() => this.router.navigate(['/events']), 600);
+          this.successMessage = 'Event Created Successfully';
+          setTimeout(() => this.router.navigate(['/dashboard']), 800);
         },
-        error: () => (this.errorMessage = 'Create failed.'),
-        complete: () => (this.loading = false),
+        error: err => {
+          this.errorMessage = err?.error?.message || 'Create failed';
+        },
+        complete: () => this.loading = false
       });
+
     }
   }
 }

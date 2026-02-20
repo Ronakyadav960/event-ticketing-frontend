@@ -42,12 +42,12 @@
 }
 
 .link:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(224, 18, 138, 0.18);
 }
 
 /* Active Page Highlight */
 .link.active {
-  background: #813baa;
+  background: #4f40d6;
   color: #fff;
 }
 

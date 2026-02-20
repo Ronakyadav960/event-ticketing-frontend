@@ -7,7 +7,7 @@ import { EventService } from '../../services/event.service';
 @Component({
   standalone: true,
   selector: 'app-events',
-  imports: [CommonModule, RouterModule, FormsModule, DatePipe],
+  imports: [CommonModule, RouterModule, FormsModule, DatePipe], 
   templateUrl: './events.component.html',
   styleUrls: ['./events.component.css'],
 })

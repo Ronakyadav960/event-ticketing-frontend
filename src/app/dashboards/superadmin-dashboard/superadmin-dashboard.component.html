@@ -1,0 +1,82 @@
+<div class="dashboard" *ngIf="data; else loadingBlock">
+
+  <h2>Super Admin Dashboard</h2>
+
+  <!-- KPI CARDS -->
+  <div class="kpis">
+    <div class="card">
+      <strong>Users:</strong>
+      {{ data?.totals?.users ?? 0 }}
+    </div>
+
+    <div class="card">
+      <strong>Creators:</strong>
+      {{ data?.totals?.creators ?? 0 }}
+    </div>
+
+    <div class="card">
+      <strong>Events:</strong>
+      {{ data?.totals?.events ?? 0 }}
+    </div>
+
+    <div class="card">
+      <strong>Revenue:</strong>
+      ₹{{ data?.totals?.revenue ?? 0 }}
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div *ngIf="data?.monthlyTrend?.length > 0; else noChart">
+    <canvas #trendChart></canvas>
+  </div>
+
+  <ng-template #noChart>
+    <p>No monthly revenue data available yet.</p>
+  </ng-template>
+
+  <!-- TOP EVENTS -->
+  <h3>Top Events</h3>
+
+  <table *ngIf="data?.topEvents?.length > 0; else noEvents">
+    <tr>
+      <th>Event</th>
+      <th>Revenue</th>
+      <th>Bookings</th>
+    </tr>
+    <tr *ngFor="let e of data?.topEvents">
+      <td>{{ e.title }}</td>
+      <td>₹{{ e.revenue }}</td>
+      <td>{{ e.bookings }}</td>
+    </tr>
+  </table>
+
+  <ng-template #noEvents>
+    <p>No top events yet.</p>
+  </ng-template>
+
+  <!-- TOP CREATORS -->
+  <h3>Top Creators</h3>
+
+  <table *ngIf="data?.topCreators?.length > 0; else noCreators">
+    <tr>
+      <th>Name</th>
+      <th>Events</th>
+      <th>Revenue</th>
+    </tr>
+    <tr *ngFor="let c of data?.topCreators">
+      <td>{{ c?.creator?.name }}</td>
+      <td>{{ c?.eventsCreated }}</td>
+      <td>₹{{ c?.revenue }}</td>
+    </tr>
+  </table>
+
+  <ng-template #noCreators>
+    <p>No creator ranking available yet.</p>
+  </ng-template>
+
+</div>
+
+<!-- LOADING STATE -->
+<ng-template #loadingBlock>
+  <p>Loading dashboard...</p>
+</ng-template>

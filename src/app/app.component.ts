@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import {
   Router,
   RouterOutlet,
+  RouterLink,
+  RouterLinkActive,
   NavigationEnd
 } from '@angular/router';
 import { filter, Subject, takeUntil } from 'rxjs';
@@ -13,7 +15,9 @@ import { AuthService } from './auth/auth.service';
   standalone: true,
   imports: [
     CommonModule,
-    RouterOutlet
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
@@ -21,11 +25,12 @@ import { AuthService } from './auth/auth.service';
 export class AppComponent implements OnDestroy {
 
   private router = inject(Router);
+  private authService = inject(AuthService);
+
   private destroy$ = new Subject<void>();
 
-  auth = inject(AuthService);
-
   isLoginPage = false;
+  isRegisterPage = false;
 
   constructor() {
     this.router.events
@@ -34,20 +39,49 @@ export class AppComponent implements OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe((event: NavigationEnd) => {
-        this.isLoginPage = event.urlAfterRedirects.includes('/login');
+        const url = event.urlAfterRedirects;
+
+        this.isLoginPage = url.includes('/login');
+        this.isRegisterPage = url.includes('/register');
       });
   }
 
-  // ✅ Safe navigation helper
-  go(path: string): void {
-    if (!path) return;
-    this.router.navigateByUrl(path);
+  // =====================
+  // ROLE HELPERS
+  // =====================
+
+  get currentUser() {
+    return this.authService.getUser();
   }
 
-  // ✅ Proper logout handler
+  get isLoggedIn(): boolean {
+    return this.authService.isLoggedIn();
+  }
+
+  get isUser(): boolean {
+    return this.currentUser?.role === 'user';
+  }
+
+  get isCreator(): boolean {
+    return this.currentUser?.role === 'creator';
+  }
+
+  get isSuperAdmin(): boolean {
+    return this.currentUser?.role === 'superadmin';
+  }
+
+  // Superadmin should also see creator features
+  get canManageEvents(): boolean {
+    return this.isCreator || this.isSuperAdmin;
+  }
+
+  // =====================
+  // LOGOUT
+  // =====================
+
   logout(): void {
     try {
-      this.auth.logout();
+      this.authService.logout();
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
@@ -55,19 +89,6 @@ export class AppComponent implements OnDestroy {
     }
   }
 
-  // ✅ Strong login detection
-  get isLoggedIn(): boolean {
-    try {
-      if (typeof this.auth.isLoggedIn === 'function') {
-        return this.auth.isLoggedIn();
-      }
-      return !!localStorage.getItem('token');
-    } catch {
-      return false;
-    }
-  }
-
-  // ✅ Prevent memory leaks
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();

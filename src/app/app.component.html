@@ -1,54 +1,80 @@
 <nav class="navbar">
-  <div class="logo" (click)="go('/events')">
+
+  <div class="logo" routerLink="/events">
     🎟 Event Booking
   </div>
 
   <div class="nav-links">
 
-    <!-- Events -->
+    <!-- EVENTS (All logged in users) -->
     <span
       class="link"
-      *ngIf="!isLoginPage"
+      *ngIf="isLoggedIn && !isLoginPage && !isRegisterPage"
       routerLink="/events"
-      routerLinkActive="active"
-      (click)="go('/events')">
+      routerLinkActive="active">
       Events
     </span>
 
-    <!-- Admin Links -->
+    <!-- CREATE EVENT (Creator + Superadmin) -->
     <span
-      *ngIf="auth.isAdmin() && !isLoginPage"
       class="link"
+      *ngIf="(isCreator || isSuperAdmin) && !isLoginPage && !isRegisterPage"
       routerLink="/create-event"
-      routerLinkActive="active"
-      (click)="go('/create-event')">
-      Create
+      routerLinkActive="active">
+      Create Event
     </span>
 
+   <!-- Creator Dashboard -->
+<span
+  *ngIf="isCreator"
+  routerLink="/creator-dashboard">
+  <!--routerLinkActive="active">-->
+  Dashboard
+</span>
+
+<!-- Superadmin Dashboard -->
+<span
+  *ngIf="isSuperAdmin"
+  routerLink="/superadmin-dashboard">
+   <!--routerLinkActive="active">-->
+  Dashboard
+</span>
+
+     MEMBERS (Superadmin only) 
     <span
-      *ngIf="auth.isAdmin() && !isLoginPage"
       class="link"
-      routerLink="/dashboard"
-      routerLinkActive="active"
-      (click)="go('/dashboard')">
-      Dashboard
+      *ngIf="isSuperAdmin && !isLoginPage && !isRegisterPage"
+      routerLink="/members"
+      routerLinkActive="active">
+      Members
     </span>
 
-    <!-- Right Side Buttons -->
+    <!-- SUPER ADMIN PANEL -->
+    <span
+      class="link"
+      *ngIf="isSuperAdmin && !isLoginPage && !isRegisterPage"
+      routerLink="/super-admin"
+      routerLinkActive="active">
+      Super Admin
+    </span>
+
+    <!-- RIGHT SIDE -->
     <div class="right">
 
-      <!-- Login -->
       <button
-        class="login-btn"
-        *ngIf="isLoginPage"
-        (click)="go('/login')">
+        *ngIf="!isLoggedIn"
+        routerLink="/login">
         Login
+      </button>z
+
+      <button
+        *ngIf="!isLoggedIn"
+        routerLink="/register">
+        Register
       </button>
 
-      <!-- Logout -->
       <button
-        class="logout-btn"
-        *ngIf="!isLoginPage"
+        *ngIf="isLoggedIn"
         (click)="logout()">
         Logout
       </button>

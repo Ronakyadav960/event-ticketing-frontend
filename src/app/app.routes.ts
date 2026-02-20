@@ -1,4 +1,4 @@
-// src/app/app.routes.ts  (Standalone Angular Routing)
+// src/app/app.routes.ts
 
 import { Routes } from '@angular/router';
 
@@ -10,13 +10,10 @@ import { EventDetailsComponent } from './pages/event-details/event-details.compo
 import { CreateEventComponent } from './pages/create-event/create-event.component';
 import { BookingConfirmationComponent } from './pages/booking-confirmation/booking-confirmation.component';
 
-import { AdminDashboardComponent } from './admin/admin-dashboard.component';
-
 import { PaymentSuccessComponent } from './pages/payment-success/payment-success.component';
 import { PaymentCancelComponent } from './pages/payment-cancel/payment-cancel.component';
 
 import { authGuard } from './auth/auth-guard';
-import { adminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
 
@@ -34,20 +31,34 @@ export const routes: Routes = [
 
   { path: 'booking/:ticketId', component: BookingConfirmationComponent, canActivate: [authGuard] },
 
-  // ---------- ADMIN ----------
-  {
-    path: 'dashboard',
-    component: AdminDashboardComponent,
-    canActivate: [authGuard, adminGuard],
-  },
+  // ---------- CREATOR + SUPERADMIN ----------
 
-  { path: 'admin-dashboard', redirectTo: 'dashboard', pathMatch: 'full' },
+  {
+  path: 'creator-dashboard',
+  loadComponent: () =>
+    import('./dashboards/creator-dashboard/creator-dashboard.component')
+      .then(m => m.CreatorDashboardComponent),
+  canActivate: [authGuard],
+  data: { role: 'creator' }
+},
+
+{
+  path: 'superadmin-dashboard',
+  loadComponent: () =>
+    import('./dashboards/superadmin-dashboard/superadmin-dashboard.component')
+      .then(m => m.SuperadminDashboardComponent),
+  canActivate: [authGuard],
+  data: { role: 'superadmin' }
+},
+
 
   {
     path: 'create-event',
     component: CreateEventComponent,
-    canActivate: [authGuard, adminGuard],
+    canActivate: [authGuard],
+    data: { role: 'creator' }
   },
+  
 
   // ---------- FALLBACK ----------
   { path: '**', redirectTo: 'events' }
