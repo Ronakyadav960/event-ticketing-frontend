@@ -41,13 +41,32 @@ export class AuthService {
 
   // 📝 REGISTER
   register(name: string, email: string, password: string, role: string) {
-    return this.http.post<{ message: string; user: User }>(
+    return this.http.post<{ message: string; user: User; verifyLink?: string; otp?: string }>(
       `${this.apiUrl}/register`,
       {
         name: (name || '').trim(),
         email: (email || '').trim().toLowerCase(),
         password: (password || '').trim(),
         role
+      }
+    );
+  }
+
+  verifyOtp(email: string, otp: string) {
+    return this.http.post<{ message: string }>(
+      `${this.apiUrl}/verify-otp`,
+      {
+        email: (email || '').trim().toLowerCase(),
+        otp: (otp || '').trim(),
+      }
+    );
+  }
+
+  resendOtp(email: string) {
+    return this.http.post<{ message: string; verifyLink?: string; otp?: string }>(
+      `${this.apiUrl}/resend-otp`,
+      {
+        email: (email || '').trim().toLowerCase(),
       }
     );
   }

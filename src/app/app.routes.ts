@@ -9,6 +9,7 @@ import { EventsComponent } from './pages/events/events.component';
 import { EventDetailsComponent } from './pages/event-details/event-details.component';
 import { CreateEventComponent } from './pages/create-event/create-event.component';
 import { BookingConfirmationComponent } from './pages/booking-confirmation/booking-confirmation.component';
+import { BookingHistoryComponent } from './pages/booking-history/booking-history.component';
 
 import { PaymentSuccessComponent } from './pages/payment-success/payment-success.component';
 import { PaymentCancelComponent } from './pages/payment-cancel/payment-cancel.component';
@@ -25,6 +26,7 @@ export const routes: Routes = [
   // ---------- USER ----------
   { path: 'events', component: EventsComponent, canActivate: [authGuard] },
   { path: 'events/:id', component: EventDetailsComponent, canActivate: [authGuard] },
+  { path: 'history', component: BookingHistoryComponent, canActivate: [authGuard] },
 
   { path: 'payment-success', component: PaymentSuccessComponent, canActivate: [authGuard] },
   { path: 'payment-cancel', component: PaymentCancelComponent, canActivate: [authGuard] },

@@ -211,20 +211,26 @@
 
 .info{
   padding: 12px 12px 14px;
+  background: rgba(11, 15, 23, 0.65);
+  border-top: 1px solid rgba(255,255,255,0.10);
 }
 
 .title{
   font-weight: 900;
   letter-spacing: -0.2px;
   margin-bottom: 6px;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
 }
 
 .meta, .meta2{
   font-size: 12px;
-  color: rgba(233,238,248,0.78);
+  color: #f1f5ff;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 8px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
 }
 .meta2{ margin-top: 6px; }
 .dot{ opacity: .6; }
@@ -235,13 +241,16 @@
   justify-content: space-between;
   align-items: center;
   margin-top: 10px;
+  color: #ffffff;
 }
 .price{
   font-weight: 900;
+  color: #ffffff;
 }
 .seats{
   font-size: 12px;
-  color: rgba(233,238,248,0.75);
+  color: #f8fafc;
+  font-weight: 700;
 }
 
 .cta{
@@ -251,9 +260,9 @@
   border-radius: 12px;
   border: none;
   cursor: pointer;
-  background: rgba(255,255,255,0.10);
-  border: 1px solid rgba(255,255,255,0.14);
-  color: #e9eef8;
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #ffffff;
   font-weight: 800;
 }
 .cta:hover{

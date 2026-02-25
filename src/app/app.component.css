@@ -1,94 +1,116 @@
 /* ================= NAVBAR ================= */
 
 .navbar {
-  height: 56px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  background: #111827;
+  padding: 0 24px;
+  background: linear-gradient(90deg, #111827, #1f2937);
   color: #fff;
   position: sticky;
   top: 0;
   z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Logo */
 .logo {
   font-weight: 700;
-  font-size: 18px;
+  font-size: 20px;
   cursor: pointer;
   user-select: none;
+  letter-spacing: 0.5px;
+  transition: 0.3s ease;
+}
+
+.logo:hover {
+  opacity: 0.85;
 }
 
 /* Nav Links Container */
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 16px; /* spacing between Events, Create, Dashboard */
+  gap: 18px;
 }
 
 /* Normal Link */
 .link {
-  color: #fff;
-  padding: 6px 14px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  padding: 7px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
   display: inline-flex;
   align-items: center;
   cursor: pointer;
   user-select: none;
-  transition: all 0.3s ease;
+  font-size: 14px;
+  transition: all 0.25s ease;
 }
 
+/* Hover */
 .link:hover {
-  background: rgba(224, 18, 138, 0.18);
+  background: rgba(99, 102, 241, 0.25);
+  transform: translateY(-2px);
 }
 
 /* Active Page Highlight */
 .link.active {
-  background: #4f40d6;
+  background: #6366f1;
   color: #fff;
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);
 }
 
-/* Right Section (Login/Logout) */
+/* ================= RIGHT SECTION ================= */
+
 .right {
   display: flex;
   align-items: center;
-  gap: 14px; /* spacing between Dashboard and Logout */
+  gap: 14px;
   margin-left: 10px;
 }
 
-/* Logout Button */
-.logout-btn {
-  padding: 6px 16px;
-  border-radius: 20px;
+/* Base Button Style */
+.right button {
+  padding: 7px 18px;
+  border-radius: 25px;
   border: none;
   cursor: pointer;
-  background: #ef4444;
-  color: #fff;
   font-weight: 600;
-  transition: 0.3s ease;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  letter-spacing: 0.4px;
 }
 
-.logout-btn:hover {
-  background: #dc2626;
-}
+/* ================= LOGIN BUTTON ================= */
 
-/* Login Button (optional styling same as logout) */
-.login-btn {
-  padding: 6px 16px;
-  border-radius: 20px;
-  border: none;
-  cursor: pointer;
-  background: #3b82f6;
+.login-btn,
+.right button[routerLink="/login"] {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: #fff;
-  font-weight: 600;
-  transition: 0.3s ease;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
 }
 
-.login-btn:hover {
-  background: #2563eb;
+.login-btn:hover,
+.right button[routerLink="/login"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.6);
+}
+
+/* ================= LOGOUT BUTTON ================= */
+
+.logout-btn,
+.right button:not([routerLink]) {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4);
+}
+
+.logout-btn:hover,
+.right button:not([routerLink]):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(220, 38, 38, 0.6);
 }
 
 /* ================= PAGE CONTAINER ================= */
@@ -96,5 +118,5 @@
 .container {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px;
 }

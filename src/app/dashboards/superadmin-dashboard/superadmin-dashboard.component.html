@@ -1,82 +1,250 @@
 <div class="dashboard" *ngIf="data; else loadingBlock">
 
-  <h2>Super Admin Dashboard</h2>
+  <!-- HEADER -->
+  <div class="dashboard-header">
+    <div>
+      <h2>Super Admin Dashboard</h2>
+      <p class="subtitle">Platform overview & controls</p>
+    </div>
+  </div>
+
+  <div class="error-box" *ngIf="errorMsg">{{ errorMsg }}</div>
 
   <!-- KPI CARDS -->
   <div class="kpis">
-    <div class="card">
-      <strong>Users:</strong>
-      {{ data?.totals?.users ?? 0 }}
+
+    <div class="card clickable" (click)="openUsers()">
+      <div class="card-title">Total Users</div>
+      <div class="card-value">{{ data?.totals?.users ?? 0 }}</div>
     </div>
 
-    <div class="card">
-      <strong>Creators:</strong>
-      {{ data?.totals?.creators ?? 0 }}
+    <div class="card clickable" (click)="toggleCreators()">
+      <div class="card-title">Total Creators</div>
+      <div class="card-value">{{ data?.totals?.creators ?? 0 }}</div>
+      <div class="card-hint">Click to view creators list</div>
     </div>
 
-    <div class="card">
-      <strong>Events:</strong>
-      {{ data?.totals?.events ?? 0 }}
+    <div class="card clickable" (click)="openEvents()">
+      <div class="card-title">Total Events</div>
+      <div class="card-value">{{ data?.totals?.events ?? 0 }}</div>
     </div>
 
-    <div class="card">
-      <strong>Revenue:</strong>
-      ₹{{ data?.totals?.revenue ?? 0 }}
+  </div>
+
+  <!-- QUICK STATS -->
+  <div class="quick-stats">
+    <div class="q-card">
+      <div class="q-title">Upcoming Events</div>
+      <div class="q-value">{{ upcomingEventsCount }}</div>
+    </div>
+    <div class="q-card">
+      <div class="q-title">Past Events</div>
+      <div class="q-value">{{ pastEventsCount }}</div>
+    </div>
+    <div class="q-card">
+      <div class="q-title">Creators With Events</div>
+      <div class="q-value">{{ creatorsWithEventsCount }}</div>
     </div>
   </div>
 
-  <!-- CHART -->
-  <div *ngIf="data?.monthlyTrend?.length > 0; else noChart">
-    <canvas #trendChart></canvas>
+  <!-- CREATOR LIST -->
+  <div class="table-card" *ngIf="showCreators">
+    <h3>All Creators</h3>
+
+    <div class="filters">
+      <select class="select" [(ngModel)]="creatorSortField" (ngModelChange)="creatorPage = 1">
+        <option value="name">Sort by Name</option>
+        <option value="email">Sort by Email</option>
+        <option value="events">Sort by Events</option>
+      </select>
+      <select class="select" [(ngModel)]="creatorSortDir" (ngModelChange)="creatorPage = 1">
+        <option value="asc">Asc</option>
+        <option value="desc">Desc</option>
+      </select>
+    </div>
+
+    <div *ngIf="sortedCreatorsWithEvents.length > 0; else noCreators" class="creator-list">
+      <div class="creator-row" *ngFor="let c of pagedCreatorsWithEvents">
+        <div class="creator-meta">
+          <div class="creator-name">{{ c?.name }}</div>
+          <div class="creator-email">{{ c?.email }}</div>
+          <div class="creator-count">Events: {{ c?.events?.length || 0 }}</div>
+          <button class="btn small ghost" (click)="openCreatorModal(c)">View Profile</button>
+        </div>
+
+        <div class="creator-events">
+          <div class="event-mini" *ngFor="let e of c?.events">
+            <div class="event-title">{{ e?.title }}</div>
+            <div class="event-actions">
+              <button class="btn small" (click)="editEvent(e)">Edit</button>
+              <button class="btn small danger" (click)="deleteEvent(e)">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pagination" *ngIf="sortedCreatorsWithEvents.length > 0">
+      <button class="btn small ghost" (click)="creatorPage = creatorPageSafe - 1" [disabled]="creatorPageSafe <= 1">Prev</button>
+      <div class="page-meta">Page {{ creatorPageSafe }} of {{ creatorPageCount }}</div>
+      <button class="btn small ghost" (click)="creatorPage = creatorPageSafe + 1" [disabled]="creatorPageSafe >= creatorPageCount">Next</button>
+    </div>
+
+    <ng-template #noCreators>
+      <div class="empty-box">No creators found.</div>
+    </ng-template>
   </div>
 
-  <ng-template #noChart>
-    <p>No monthly revenue data available yet.</p>
-  </ng-template>
+  <!-- EVENTS (DROPDOWN) -->
+  <details class="table-card drop" [open]="showEvents">
+    <summary>
+      <h3>All Events</h3>
+      <span class="badge">{{ events.length }}</span>
+    </summary>
 
-  <!-- TOP EVENTS -->
-  <h3>Top Events</h3>
+    <div class="drop-body">
+      <div class="filters">
+        <input class="input" placeholder="Search events, venue, creator..." [(ngModel)]="eventSearch" (ngModelChange)="eventPage = 1" />
+        <select class="select" [(ngModel)]="eventFilter" (ngModelChange)="eventPage = 1">
+          <option value="all">All</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="past">Past</option>
+        </select>
+        <select class="select" [(ngModel)]="eventSortField" (ngModelChange)="eventPage = 1">
+          <option value="date">Sort by Date</option>
+          <option value="title">Sort by Title</option>
+          <option value="venue">Sort by Venue</option>
+          <option value="creator">Sort by Creator</option>
+        </select>
+        <select class="select" [(ngModel)]="eventSortDir" (ngModelChange)="eventPage = 1">
+          <option value="asc">Asc</option>
+          <option value="desc">Desc</option>
+        </select>
+      </div>
 
-  <table *ngIf="data?.topEvents?.length > 0; else noEvents">
-    <tr>
-      <th>Event</th>
-      <th>Revenue</th>
-      <th>Bookings</th>
-    </tr>
-    <tr *ngFor="let e of data?.topEvents">
-      <td>{{ e.title }}</td>
-      <td>₹{{ e.revenue }}</td>
-      <td>{{ e.bookings }}</td>
-    </tr>
-  </table>
+      <table *ngIf="sortedEvents.length > 0; else noEvents">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Date</th>
+            <th>Venue</th>
+            <th>Created By</th>
+            <th class="right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let e of pagedEvents">
+            <td>{{ e?.title }}</td>
+            <td>{{ e?.date | date:'medium' }}</td>
+            <td>{{ e?.venue || '-' }}</td>
+            <td>{{ getCreatorName(e) }}</td>
+            <td class="right">
+              <button class="btn small" (click)="editEvent(e)">Edit</button>
+              <button class="btn small danger" (click)="deleteEvent(e)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-  <ng-template #noEvents>
-    <p>No top events yet.</p>
-  </ng-template>
+      <div class="pagination" *ngIf="sortedEvents.length > 0">
+        <button class="btn small ghost" (click)="eventPage = eventPageSafe - 1" [disabled]="eventPageSafe <= 1">Prev</button>
+        <div class="page-meta">Page {{ eventPageSafe }} of {{ eventPageCount }}</div>
+        <button class="btn small ghost" (click)="eventPage = eventPageSafe + 1" [disabled]="eventPageSafe >= eventPageCount">Next</button>
+      </div>
 
-  <!-- TOP CREATORS -->
-  <h3>Top Creators</h3>
+      <ng-template #noEvents>
+        <div class="empty-box">No events found.</div>
+      </ng-template>
+    </div>
+  </details>
 
-  <table *ngIf="data?.topCreators?.length > 0; else noCreators">
-    <tr>
-      <th>Name</th>
-      <th>Events</th>
-      <th>Revenue</th>
-    </tr>
-    <tr *ngFor="let c of data?.topCreators">
-      <td>{{ c?.creator?.name }}</td>
-      <td>{{ c?.eventsCreated }}</td>
-      <td>₹{{ c?.revenue }}</td>
-    </tr>
-  </table>
+  <!-- USERS (DROPDOWN) -->
+  <details class="table-card drop" [open]="showUsers">
+    <summary>
+      <h3>All Users</h3>
+      <span class="badge">{{ users.length }}</span>
+    </summary>
 
-  <ng-template #noCreators>
-    <p>No creator ranking available yet.</p>
-  </ng-template>
+    <div class="drop-body">
+      <div class="filters">
+        <input class="input" placeholder="Search name, email, role..." [(ngModel)]="userSearch" (ngModelChange)="userPage = 1" />
+        <select class="select" [(ngModel)]="userSortField" (ngModelChange)="userPage = 1">
+          <option value="name">Sort by Name</option>
+          <option value="email">Sort by Email</option>
+          <option value="role">Sort by Role</option>
+        </select>
+        <select class="select" [(ngModel)]="userSortDir" (ngModelChange)="userPage = 1">
+          <option value="asc">Asc</option>
+          <option value="desc">Desc</option>
+        </select>
+      </div>
 
+      <table *ngIf="sortedUsers.length > 0; else noUsers">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th class="right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let u of pagedUsers">
+            <td>{{ u?.name }}</td>
+            <td>{{ u?.email }}</td>
+            <td>{{ u?.role }}</td>
+            <td class="right">
+              <button class="btn small" (click)="editUser(u)">Edit</button>
+              <button class="btn small danger" (click)="deleteUser(u)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="pagination" *ngIf="sortedUsers.length > 0">
+        <button class="btn small ghost" (click)="userPage = userPageSafe - 1" [disabled]="userPageSafe <= 1">Prev</button>
+        <div class="page-meta">Page {{ userPageSafe }} of {{ userPageCount }}</div>
+        <button class="btn small ghost" (click)="userPage = userPageSafe + 1" [disabled]="userPageSafe >= userPageCount">Next</button>
+      </div>
+
+      <ng-template #noUsers>
+        <div class="empty-box">No users found.</div>
+      </ng-template>
+    </div>
+  </details>
+
+</div>
+
+<!-- CREATOR PROFILE MODAL -->
+<div class="modal-backdrop" *ngIf="showCreatorModal" (click)="closeCreatorModal()"></div>
+<div class="modal" *ngIf="showCreatorModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Creator Profile</h3>
+      <button class="btn small ghost" (click)="closeCreatorModal()">Close</button>
+    </div>
+    <div class="modal-body" *ngIf="selectedCreator">
+      <p><strong>Name:</strong> {{ selectedCreator?.name }}</p>
+      <p><strong>Email:</strong> {{ selectedCreator?.email }}</p>
+      <p><strong>Role:</strong> {{ selectedCreator?.role }}</p>
+      <p><strong>Events:</strong> {{ selectedCreator?.events?.length || 0 }}</p>
+
+      <div class="modal-events">
+        <div class="event-mini" *ngFor="let e of selectedCreator?.events">
+          <div class="event-title">{{ e?.title }}</div>
+          <div class="event-actions">
+            <button class="btn small" (click)="editEvent(e)">Edit</button>
+            <button class="btn small danger" (click)="deleteEvent(e)">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- LOADING STATE -->
 <ng-template #loadingBlock>
-  <p>Loading dashboard...</p>
+  <div class="loading-box">
+    Loading dashboard...
+  </div>
 </ng-template>

@@ -42,7 +42,16 @@ import { AuthService } from '../auth.service';
 
       <button (click)="register()">Register</button>
 
+      <p class="success" *ngIf="success">{{ success }}</p>
       <p class="error" *ngIf="error">{{ error }}</p>
+
+      <div class="verify" *ngIf="otpStep">
+        <p>OTP sent to your email. Enter it below:</p>
+        <input placeholder="Enter OTP" [(ngModel)]="otp" />
+        <button (click)="verifyOtp()">Verify OTP</button>
+        <button class="secondary" (click)="resendOtp()">Resend OTP</button>
+        <small class="error" *ngIf="otpError">{{ otpError }}</small>
+      </div>
 
       <p class="link" (click)="goToLogin()">Already have an account?</p>
     </div>
@@ -79,6 +88,37 @@ import { AuthService } from '../auth.service';
       text-align: left;
       margin-top: 4px;
     }
+    .success {
+      color: #16a34a;
+      font-size: 12px;
+      display: block;
+      text-align: left;
+      margin-top: 6px;
+    }
+    .verify {
+      margin-top: 8px;
+      text-align: left;
+      font-size: 12px;
+      word-break: break-all;
+    }
+    .verify input {
+      width: 100%;
+      margin-top: 6px;
+      padding: 8px;
+    }
+    .verify button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .verify button.secondary {
+      background: #0f172a;
+    }
     .link {
       margin-top: 10px;
       color: #4f46e5;
@@ -93,6 +133,10 @@ export class RegisterComponent {
   password = '';
   role = '';
   error = '';
+  success = '';
+  otp = '';
+  otpError = '';
+  otpStep = false;
   submitted = false;
 
   constructor(
@@ -107,18 +151,62 @@ export class RegisterComponent {
   register() {
     this.submitted = true;
     this.error = '';
+    this.success = '';
+    this.otp = '';
+    this.otpError = '';
+    this.otpStep = false;
 
     if (!this.name || !this.validEmail() || this.password.length < 6 || !this.role) {
       return;
     }
 
     this.auth.register(this.name, this.email, this.password, this.role).subscribe({
-      next: () => {
-        alert('Registration successful. Please verify your email.');
-        this.router.navigate(['/login']);
+      next: (res: any) => {
+        this.success = res?.message || 'Registration successful. Please verify your email.';
+        this.otpStep = true;
       },
       error: (err) => {
         this.error = err?.error?.message || 'Registration failed';
+      }
+    });
+  }
+
+  verifyOtp() {
+    this.otpError = '';
+
+    if (!this.email || !this.otp) {
+      this.otpError = 'Email and OTP are required';
+      return;
+    }
+
+    this.auth.verifyOtp(this.email, this.otp).subscribe({
+      next: (res: any) => {
+        this.success = res?.message || 'Email verified successfully. You can login now.';
+        this.router.navigate(['/login']);
+      },
+      error: (err) => {
+        this.otpError = err?.error?.message || 'OTP verification failed';
+      }
+    });
+  }
+
+  resendOtp() {
+    this.otpError = '';
+
+    if (!this.email) {
+      this.otpError = 'Email is required';
+      return;
+    }
+
+    this.auth.resendOtp(this.email).subscribe({
+      next: (res: any) => {
+        this.success = res?.message || 'OTP resent. Check your email.';
+        if (res?.otp) {
+          this.otp = res.otp;
+        }
+      },
+      error: (err) => {
+        this.otpError = err?.error?.message || 'Resend OTP failed';
       }
     });
   }

@@ -6,73 +6,76 @@
 
   <div class="nav-links">
 
-    <!-- EVENTS (All logged in users) -->
-    <span
-      class="link"
-      *ngIf="isLoggedIn && !isLoginPage && !isRegisterPage"
-      routerLink="/events"
-      routerLinkActive="active">
-      Events
-    </span>
+    <!-- ================= USER ================= -->
+    <ng-container *ngIf="isLoggedIn && !isLoginPage && !isRegisterPage">
 
-    <!-- CREATE EVENT (Creator + Superadmin) -->
-    <span
-      class="link"
-      *ngIf="(isCreator || isSuperAdmin) && !isLoginPage && !isRegisterPage"
-      routerLink="/create-event"
-      routerLinkActive="active">
-      Create Event
-    </span>
+      <!-- EVENTS (All roles after login) -->
+      <span
+        class="link"
+        routerLink="/events"
+        routerLinkActive="active">
+        Events
+      </span>
 
-   <!-- Creator Dashboard -->
-<span
-  *ngIf="isCreator"
-  routerLink="/creator-dashboard">
-  <!--routerLinkActive="active">-->
-  Dashboard
-</span>
+      <span
+        *ngIf="isUser"
+        class="link"
+        routerLink="/history"
+        routerLinkActive="active">
+        History
+      </span>
 
-<!-- Superadmin Dashboard -->
-<span
-  *ngIf="isSuperAdmin"
-  routerLink="/superadmin-dashboard">
-   <!--routerLinkActive="active">-->
-  Dashboard
-</span>
+      <!-- ================= CREATOR ================= -->
+      <ng-container *ngIf="isCreator">
 
-     MEMBERS (Superadmin only) 
-    <span
-      class="link"
-      *ngIf="isSuperAdmin && !isLoginPage && !isRegisterPage"
-      routerLink="/members"
-      routerLinkActive="active">
-      Members
-    </span>
+        <span
+          class="link"
+          routerLink="/creator-dashboard"
+          routerLinkActive="active">
+          Dashboard
+        </span>
 
-    <!-- SUPER ADMIN PANEL -->
-    <span
-      class="link"
-      *ngIf="isSuperAdmin && !isLoginPage && !isRegisterPage"
-      routerLink="/super-admin"
-      routerLinkActive="active">
-      Super Admin
-    </span>
+        <span
+          class="link"
+          routerLink="/create-event"
+          routerLinkActive="active">
+          Create Event
+        </span>
 
-    <!-- RIGHT SIDE -->
+      </ng-container>
+
+      <!-- ================= SUPERADMIN ================= -->
+      <ng-container *ngIf="isSuperAdmin">
+
+        <span
+          class="link"
+          routerLink="/superadmin-dashboard"
+          routerLinkActive="active">
+          Dashboard
+        </span>
+
+        <span
+          class="link"
+          routerLink="/create-event"
+          routerLinkActive="active">
+          Create Event
+        </span>
+
+      </ng-container>
+
+    </ng-container>
+
+    <!-- ================= RIGHT SIDE ================= -->
     <div class="right">
 
+      <!-- Only LOGIN button on login/register pages -->
       <button
         *ngIf="!isLoggedIn"
         routerLink="/login">
         Login
-      </button>z
-
-      <button
-        *ngIf="!isLoggedIn"
-        routerLink="/register">
-        Register
       </button>
 
+      <!-- Logout only when logged in -->
       <button
         *ngIf="isLoggedIn"
         (click)="logout()">

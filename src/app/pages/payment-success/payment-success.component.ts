@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -22,8 +23,8 @@ export class PaymentSuccessComponent implements OnInit, OnDestroy {
 
   error = '';
 
-  // ✅ PRODUCTION BACKEND URL
-  private API_BASE = 'https://event-ticketing-backend-1.onrender.com/api';
+  // ✅ Use environment backend URL
+  private API_BASE = `${environment.apiUrl}/api`;
 
   private tries = 0;
   private maxTries = 12;

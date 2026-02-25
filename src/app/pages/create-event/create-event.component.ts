@@ -37,6 +37,9 @@ export class CreateEventComponent implements OnInit {
   loading = false;
   successMessage = '';
   errorMessage = '';
+  private readonly maxImageBytes = 5 * 1024 * 1024;
+  private readonly imageWidth = 1200;
+  private readonly imageHeight = 800;
 
   // =============================
   // INIT
@@ -109,11 +112,29 @@ export class CreateEventComponent implements OnInit {
 
     if (!file) return;
 
-    this.selectedFile = file;
+    this.errorMessage = '';
 
-    const reader = new FileReader();
-    reader.onload = () => this.imagePreviewUrl = reader.result as string;
-    reader.readAsDataURL(file);
+    if (!file.type.startsWith('image/')) {
+      this.errorMessage = 'Only image files are allowed.';
+      input.value = '';
+      return;
+    }
+
+    if (file.size > this.maxImageBytes) {
+      this.errorMessage = 'Image size must be under 5MB.';
+      input.value = '';
+      return;
+    }
+
+    this.resizeImage(file, this.imageWidth, this.imageHeight)
+      .then(({ resizedFile, previewUrl }) => {
+        this.selectedFile = resizedFile;
+        this.imagePreviewUrl = previewUrl;
+      })
+      .catch(() => {
+        this.errorMessage = 'Failed to process image.';
+        input.value = '';
+      });
   }
 
   // =============================
@@ -197,5 +218,65 @@ export class CreateEventComponent implements OnInit {
       });
 
     }
+  }
+
+  private resizeImage(file: File, targetW: number, targetH: number): Promise<{ resizedFile: File; previewUrl: string }> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = targetW;
+          canvas.height = targetH;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Canvas not supported'));
+            return;
+          }
+
+          const scale = Math.max(targetW / img.width, targetH / img.height);
+          const drawW = img.width * scale;
+          const drawH = img.height * scale;
+          const dx = (targetW - drawW) / 2;
+          const dy = (targetH - drawH) / 2;
+
+          ctx.drawImage(img, dx, dy, drawW, drawH);
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Blob failed'));
+                return;
+              }
+
+              const resizedFile = new File(
+                [blob],
+                this.getResizedFileName(file.name),
+                { type: 'image/jpeg' }
+              );
+
+              const previewUrl = canvas.toDataURL('image/jpeg', 0.85);
+              resolve({ resizedFile, previewUrl });
+            },
+            'image/jpeg',
+            0.85
+          );
+        };
+
+        img.onerror = () => reject(new Error('Image load failed'));
+        img.src = reader.result as string;
+      };
+
+      reader.onerror = () => reject(new Error('File read failed'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private getResizedFileName(originalName: string) {
+    const base = originalName.replace(/\.[^/.]+$/, '');
+    return `${base}-1200x800.jpg`;
   }
 }

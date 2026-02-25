@@ -28,6 +28,7 @@ import { AuthService } from '../auth.service';
 
     <p class="error" *ngIf="error">{{ error }}</p>
 
+
     <p class="register-text">
       Don’t have an account?
       <span (click)="goToRegister()">Register</span>
