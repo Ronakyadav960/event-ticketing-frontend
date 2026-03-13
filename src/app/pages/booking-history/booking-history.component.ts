@@ -58,4 +58,37 @@ export class BookingHistoryComponent implements OnInit {
     const d = new Date(b?.event?.date || b?.createdAt || 0).getTime();
     return isNaN(d) ? 0 : d;
   }
+
+  getRegistrationTemplateLabel(template: string): string {
+    if (template === 'workshop') return 'Workshop Form';
+    if (template === 'seminar') return 'Seminar Form';
+    return 'Standard Registration';
+  }
+
+  getRegistrationItems(b: any): Array<{ label: string; value: string }> {
+    const data = b?.registrationData || {};
+    const items: Array<{ label: string; value: string }> = [];
+
+    const baseFields = ['phone', 'experience', 'skillLevel', 'company', 'designation'];
+    baseFields.forEach((key) => {
+      if (data[key]) {
+        items.push({ label: this.toLabel(key), value: String(data[key]) });
+      }
+    });
+
+    const custom = data?.customFields || {};
+    Object.keys(custom).forEach((k) => {
+      const val = custom[k];
+      if (val === undefined || val === null || String(val).trim() === '') return;
+      items.push({ label: this.toLabel(k), value: String(val) });
+    });
+
+    return items.length ? items : [{ label: 'Details', value: 'Not provided' }];
+  }
+
+  private toLabel(key: string): string {
+    return key
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
 }

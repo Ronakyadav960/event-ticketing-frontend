@@ -8,4 +8,13 @@ export interface Event {
   price: number;
   totalSeats: number;
   bookedSeats?: number;     // ✅ optional
+  registrationTemplate?: string;
+  designTemplate?: string;
+  designConfig?: Record<string, any>;
+  customFields?: Array<{
+    label: string;
+    type: string;
+    required?: boolean;
+    options?: string[];
+  }>;
 }

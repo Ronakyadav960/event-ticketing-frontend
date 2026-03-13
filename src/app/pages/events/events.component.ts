@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -11,18 +11,31 @@ import { EventService } from '../../services/event.service';
   templateUrl: './events.component.html',
   styleUrls: ['./events.component.css'],
 })
-export class EventsComponent implements OnInit {
+export class EventsComponent implements OnInit, OnDestroy {
   private es = inject(EventService);
   private router = inject(Router);
 
   loading = false;
+  loadingMore = false;
   error = '';
   events: any[] = [];
+  categories: string[] = [];
+  private page = 1;
+  private readonly pageSize = 12;
+  hasMore = true;
+  private activeCategoryParam = '';
+  private observer?: IntersectionObserver;
+
+  @ViewChild('sentinel') set sentinelRef(el: ElementRef<HTMLDivElement> | undefined) {
+    if (!el) return;
+    this.setupObserver(el.nativeElement);
+  }
 
   // UI state
   q = '';
   status: 'all' | 'upcoming' | 'past' | 'soldout' = 'all';
   sort: 'dateAsc' | 'dateDesc' | 'priceAsc' | 'priceDesc' = 'dateAsc';
+  categoryFilter = 'all';
 
   // base url for images served from backend
   BASE = window.location.hostname === 'localhost'
@@ -31,20 +44,58 @@ export class EventsComponent implements OnInit {
 
 
   ngOnInit(): void {
-    this.fetchEvents();
+    this.loadCategories();
+    this.fetchEvents('', true);
   }
 
-  fetchEvents(): void {
-    this.loading = true;
+    loadCategories(): void {
+    this.es.getCategories().subscribe({
+      next: (list: string[]) => {
+        this.categories = Array.isArray(list) ? list : [];
+      },
+      error: () => {
+        this.categories = [];
+      }
+    });
+  }
+  selectCategory(value: string) {
+    this.categoryFilter = value;
+    const categoryParam = value === 'all' ? '' : value;
+    this.activeCategoryParam = categoryParam;
+    this.fetchEvents(categoryParam, true);
+  }
+  fetchEvents(category?: string, reset = false): void {
+    if (!reset && (!this.hasMore || this.loadingMore)) return;
+
+    if (reset) {
+      this.page = 1;
+      this.hasMore = true;
+      this.events = [];
+    }
+
+    if (reset) {
+      this.loading = true;
+    } else {
+      this.loadingMore = true;
+    }
     this.error = '';
-    this.es.getAllEvents().subscribe({
-      next: (list: any[]) => {
-        this.events = Array.isArray(list) ? list : [];
+
+    this.es.getAllEvents(category, this.page, this.pageSize).subscribe({
+      next: (res: any) => {
+        const list = Array.isArray(res?.data) ? res.data : [];
+        this.events = reset ? list : [...this.events, ...list];
+        const totalPages = Number(res?.totalPages) || 1;
+        const currentPage = Number(res?.page) || this.page;
+        this.hasMore = currentPage < totalPages && list.length > 0;
+        this.page = currentPage + 1;
       },
       error: (err: any) => {
         this.error = err?.error?.message || 'Failed to load events.';
       },
-      complete: () => (this.loading = false),
+      complete: () => {
+        this.loading = false;
+        this.loadingMore = false;
+      },
     });
   }
 
@@ -84,7 +135,9 @@ export class EventsComponent implements OnInit {
         (this.status === 'past' && st === 'Past') ||
         (this.status === 'soldout' && st === 'Sold Out');
 
-      return matchesText && matchesStatus;
+      const matchesCategory = this.matchesCategory(e);
+
+      return matchesText && matchesStatus && matchesCategory;
     });
 
     list = list.sort((a, b) => {
@@ -105,9 +158,51 @@ export class EventsComponent implements OnInit {
     return list;
   }
 
+  private matchesCategory(e: any): boolean {
+    if (this.categoryFilter === 'all') return true;
+    const category = String(e?.category || '').toLowerCase();
+    const target = String(this.categoryFilter || '').toLowerCase();
+    return category === target;
+  }
+
   openEvent(e: any): void {
     const id = e?._id || e?.id;
     if (!id) return;
     this.router.navigate(['/events', id]);
   }
+
+  eventCardClass(e: any): string {
+    const t = String(e?.designTemplate || '').toLowerCase();
+    if (t === 'movie') return 'card-variant-movie';
+    if (t === 'concert') return 'card-variant-concert';
+    if (t === 'comedy') return 'card-variant-comedy';
+    if (t === 'bold-split') return 'card-variant-bold';
+    if (t === 'editorial') return 'card-variant-editorial';
+    if (t === 'clean-hero') return 'card-variant-clean';
+    return 'card-variant-clean';
+  }
+
+  private setupObserver(target: HTMLDivElement) {
+    if (this.observer) this.observer.disconnect();
+
+    this.observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          this.fetchEvents(this.activeCategoryParam, false);
+        }
+      },
+      { rootMargin: '200px 0px', threshold: 0.1 }
+    );
+
+    this.observer.observe(target);
+  }
+
+  ngOnDestroy(): void {
+    if (this.observer) this.observer.disconnect();
+  }
 }
+
+
+
+
+

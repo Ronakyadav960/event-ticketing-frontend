@@ -24,7 +24,10 @@ import { AuthService } from '../auth.service';
       [(ngModel)]="password"
     />
 
-    <button (click)="login()">Login</button>
+    <button (click)="login()" [disabled]="loading">
+      <span *ngIf="!loading">Login</span>
+      <span class="btn-loader" *ngIf="loading"></span>
+    </button>
 
     <p class="error" *ngIf="error">{{ error }}</p>
 
@@ -58,6 +61,27 @@ import { AuthService } from '../auth.service';
       border: none;
       border-radius: 6px;
       cursor: pointer;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    button:disabled {
+      opacity: 0.75;
+      cursor: not-allowed;
+    }
+    .btn-loader {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.5);
+      border-top-color: #fff;
+      border-radius: 50%;
+      display: inline-block;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
     .error {
       color: red;
@@ -81,6 +105,7 @@ export class LoginComponent {
   email = '';
   password = '';
   error = '';
+  loading = false;
 
   constructor(
     private auth: AuthService,
@@ -93,6 +118,7 @@ export class LoginComponent {
 
   login() {
     this.error = '';
+    this.loading = true;
 
     this.auth.login(this.email, this.password).subscribe({
       next: (res: any) => {
@@ -110,7 +136,11 @@ export class LoginComponent {
       },
       error: (err) => {
         this.error = err?.error?.message || 'Invalid email or password';
-      }
+        this.loading = false;
+      },
+      complete: () => {
+        this.loading = false;
+      },
     });
   }
 }

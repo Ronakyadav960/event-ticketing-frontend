@@ -24,6 +24,13 @@
           <span>Venue: {{ b?.event?.venue || '-' }}</span>
           <span>Seats: {{ b?.seats ?? '-' }}</span>
         </div>
+        <div class="reg-block" *ngIf="b?.registrationTemplate || b?.registrationData">
+          <div class="reg-title">Registration: {{ getRegistrationTemplateLabel(b?.registrationTemplate) }}</div>
+          <div class="reg-item" *ngFor="let item of getRegistrationItems(b)">
+            <span class="reg-label">{{ item.label }}:</span>
+            <span>{{ item.value }}</span>
+          </div>
+        </div>
         <div class="ticket-id">Ticket ID: <b>{{ b?.ticketId || '-' }}</b></div>
       </div>
 

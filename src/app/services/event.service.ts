@@ -1,6 +1,6 @@
 // services/event.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { Event } from '../models/event.model';
 import { environment } from '../../environments/environment';
@@ -74,8 +74,19 @@ export class EventService {
   // =========================
   // PUBLIC ROUTES
   // =========================
-  getAllEvents(): Observable<Event[]> {
-    return this.http.get<any>(this.API).pipe(
+  getAllEvents(category?: string, page?: number, limit?: number): Observable<{
+    data: Event[];
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  }> {
+    let params = new HttpParams();
+    if (category) params = params.set('category', category);
+    if (page) params = params.set('page', String(page));
+    if (limit) params = params.set('limit', String(limit));
+
+    return this.http.get<any>(this.API, { params }).pipe(
       map(res => {
         const list = Array.isArray(res)
           ? res
@@ -85,11 +96,28 @@ export class EventService {
           ? res.data
           : [];
 
-        return list.map((e: any) => this.normalizeEvent(e));
+        const data = list.map((e: any) => this.normalizeEvent(e));
+
+        if (Array.isArray(res)) {
+          return {
+            data,
+            page: 1,
+            limit: data.length,
+            total: data.length,
+            totalPages: 1,
+          };
+        }
+
+        return {
+          data,
+          page: Number(res?.page) || 1,
+          limit: Number(res?.limit) || data.length,
+          total: Number(res?.total) || data.length,
+          totalPages: Number(res?.totalPages) || 1,
+        };
       })
     );
   }
-
   getEventById(id: string): Observable<Event> {
     return this.http
       .get<any>(`${this.API}/${id}`)
@@ -146,6 +174,18 @@ export class EventService {
   }
 
   // =========================
+  // CATEGORIES
+  // =========================
+  getCategories(): Observable<string[]> {
+    return this.http.get<any>(`${this.API}/categories`).pipe(
+      map(res => {
+        const list = Array.isArray(res) ? res : res?.categories;
+        return Array.isArray(list) ? list : [];
+      })
+    );
+  }
+
+  // =========================
   // HELPER: IMAGE URL
   // =========================
   getEventImageUrl(e: any): string {
@@ -157,3 +197,11 @@ export class EventService {
     return id ? `${base}/api/events/${id}/image` : '';
   }
 }
+
+
+
+
+
+
+
+

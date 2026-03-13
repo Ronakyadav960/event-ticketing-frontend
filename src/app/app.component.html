@@ -1,69 +1,20 @@
 <nav class="navbar">
 
-  <div class="logo" routerLink="/events">
-    🎟 Event Booking
+  <div class="left">
+    <button
+      *ngIf="isLoggedIn && !isLoginPage && !isRegisterPage"
+      class="hamburger"
+      type="button"
+      (click)="toggleDrawer()">
+      <span class="hamburger-icon">☰</span>
+    </button>
+
+    <div class="logo" routerLink="/events">
+      Event Booking
+    </div>
   </div>
 
   <div class="nav-links">
-
-    <!-- ================= USER ================= -->
-    <ng-container *ngIf="isLoggedIn && !isLoginPage && !isRegisterPage">
-
-      <!-- EVENTS (All roles after login) -->
-      <span
-        class="link"
-        routerLink="/events"
-        routerLinkActive="active">
-        Events
-      </span>
-
-      <span
-        *ngIf="isUser"
-        class="link"
-        routerLink="/history"
-        routerLinkActive="active">
-        History
-      </span>
-
-      <!-- ================= CREATOR ================= -->
-      <ng-container *ngIf="isCreator">
-
-        <span
-          class="link"
-          routerLink="/creator-dashboard"
-          routerLinkActive="active">
-          Dashboard
-        </span>
-
-        <span
-          class="link"
-          routerLink="/create-event"
-          routerLinkActive="active">
-          Create Event
-        </span>
-
-      </ng-container>
-
-      <!-- ================= SUPERADMIN ================= -->
-      <ng-container *ngIf="isSuperAdmin">
-
-        <span
-          class="link"
-          routerLink="/superadmin-dashboard"
-          routerLinkActive="active">
-          Dashboard
-        </span>
-
-        <span
-          class="link"
-          routerLink="/create-event"
-          routerLinkActive="active">
-          Create Event
-        </span>
-
-      </ng-container>
-
-    </ng-container>
 
     <!-- ================= RIGHT SIDE ================= -->
     <div class="right">
@@ -75,17 +26,71 @@
         Login
       </button>
 
-      <!-- Logout only when logged in -->
-      <button
-        *ngIf="isLoggedIn"
-        (click)="logout()">
-        Logout
-      </button>
-
     </div>
 
   </div>
 </nav>
+
+<div
+  *ngIf="isLoggedIn && !isLoginPage && !isRegisterPage"
+  class="drawer-backdrop"
+  [class.show]="isDrawerOpen"
+  (click)="closeDrawer()"></div>
+
+<aside
+  *ngIf="isLoggedIn && !isLoginPage && !isRegisterPage"
+  class="drawer"
+  [class.open]="isDrawerOpen">
+
+  <div class="drawer-header">
+    <div class="drawer-title">Navigation</div>
+  </div>
+
+  <div class="drawer-links">
+    <a
+      class="drawer-link"
+      routerLink="/events"
+      routerLinkActive="active"
+      (click)="closeDrawer()">
+      Home
+    </a>
+
+    <a
+      class="drawer-link"
+      routerLink="/history"
+      routerLinkActive="active"
+      (click)="closeDrawer()">
+      History
+    </a>
+
+    <a
+      *ngIf="isCreator || isSuperAdmin"
+      class="drawer-link"
+      [routerLink]="isCreator ? '/creator-dashboard' : '/superadmin-dashboard'"
+      routerLinkActive="active"
+      (click)="closeDrawer()">
+      Dashboard
+    </a>
+
+    <a
+      *ngIf="canManageEvents"
+      class="drawer-link"
+      routerLink="/create-event"
+      routerLinkActive="active"
+      (click)="closeDrawer()">
+      Create Event
+    </a>
+  </div>
+
+  <div class="drawer-footer">
+    <button
+      class="drawer-logout"
+      type="button"
+      (click)="logout()">
+      Logout
+    </button>
+  </div>
+</aside>
 
 <div class="container">
   <router-outlet></router-outlet>

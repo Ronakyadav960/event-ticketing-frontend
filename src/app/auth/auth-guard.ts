@@ -66,3 +66,27 @@ export const authGuard: CanActivateFn = (
 
   return true;
 };
+
+export const guestGuard: CanActivateFn = (): boolean | UrlTree => {
+  const router = inject(Router);
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    return true;
+  }
+
+  if (isTokenExpired(token)) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return true;
+  }
+
+  const role = getUserRole();
+  if (role === 'creator') {
+    return router.parseUrl('/creator-dashboard');
+  }
+  if (role === 'superadmin') {
+    return router.parseUrl('/superadmin-dashboard');
+  }
+  return router.parseUrl('/events');
+};

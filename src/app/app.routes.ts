@@ -14,14 +14,14 @@ import { BookingHistoryComponent } from './pages/booking-history/booking-history
 import { PaymentSuccessComponent } from './pages/payment-success/payment-success.component';
 import { PaymentCancelComponent } from './pages/payment-cancel/payment-cancel.component';
 
-import { authGuard } from './auth/auth-guard';
+import { authGuard, guestGuard } from './auth/auth-guard';
 
 export const routes: Routes = [
 
   // ---------- AUTH ----------
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
-  { path: 'login', component: LoginComponent },
-  { path: 'register', component: RegisterComponent },
+  { path: '', redirectTo: 'events', pathMatch: 'full' },
+  { path: 'login', component: LoginComponent, canActivate: [guestGuard] },
+  { path: 'register', component: RegisterComponent, canActivate: [guestGuard] },
 
   // ---------- USER ----------
   { path: 'events', component: EventsComponent, canActivate: [authGuard] },

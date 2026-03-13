@@ -1,37 +1,120 @@
 <div class="dashboard">
 
-  <h2>Creator Dashboard</h2>
-
-  <div class="kpis">
-    <div class="card">Events: {{ data?.totals?.events }}</div>
-    <div class="card">Bookings: {{ data?.totals?.bookings }}</div>
-    <div class="card">Revenue: ₹{{ data?.totals?.revenue }}</div>
+  <div class="dashboard-header">
+    <div>
+      <h2>Creator Dashboard</h2>
+      <p class="subtitle">Your events overview</p>
+    </div>
   </div>
 
-  <div class="charts">
-    <canvas #revenueChart></canvas>
-    <canvas #bookingChart></canvas>
+  <div class="error-box" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+  <div class="graph-card" *ngIf="data; else loadingBlock">
+    <div class="graph-title">Bookings Per Event</div>
+    <div class="graph-bars">
+      <div class="bar-wrap" *ngFor="let item of graphSeries">
+        <div class="bar" [style.height.%]="item.height">
+          <div class="bar-value">{{ item.count }}</div>
+        </div>
+        <div class="bar-label">{{ item.label }}</div>
+      </div>
+    </div>
+    <div class="graph-note">Events shown with ranking and booking counts</div>
   </div>
 
-  <h3>Top Event</h3>
-  <div class="card" *ngIf="data?.topEvent">
-    {{ data.topEvent.title }} — ₹{{ data.topEvent.revenue }}
+  <div class="top-buttons" *ngIf="data">
+    <button class="stat-btn" [class.active]="selectedBox==='events'" (click)="selectBox('events')">
+      Events Created
+      <span class="stat-value">{{ eventsCount }}</span>
+    </button>
+    <button class="stat-btn" [class.active]="selectedBox==='bookers'" (click)="selectBox('bookers')">
+      Booked Users
+      <span class="stat-value">{{ uniqueBookers.length }}</span>
+    </button>
+    <button class="stat-btn" [class.active]="selectedBox==='seats'" (click)="selectBox('seats')">
+      Seats Remaining
+      <span class="stat-value">{{ perEvent.length }}</span>
+    </button>
+    <button class="stat-btn" [class.active]="selectedBox==='revenue'" (click)="selectBox('revenue')">
+      Total Revenue
+      <span class="stat-value">₹{{ totalRevenue }}</span>
+    </button>
+    <button class="stat-btn" [class.active]="selectedBox==='top'" (click)="selectBox('top')">
+      Top Event
+      <span class="stat-value">{{ topEvent?.title || '-' }}</span>
+    </button>
   </div>
 
-  <h3>Event Stats</h3>
-  <table>
-    <tr>
-      <th>Event</th>
-      <th>Bookings</th>
-      <th>Seats</th>
-      <th>Revenue</th>
-    </tr>
-    <tr *ngFor="let e of data?.perEvent">
-      <td>{{ e.title }}</td>
-      <td>{{ e.bookings }}</td>
-      <td>{{ e.seatsBooked }}</td>
-      <td>₹{{ e.revenue }}</td>
-    </tr>
-  </table>
+  <div class="detail-box" *ngIf="selectedBox">
+    <div class="list-title" *ngIf="selectedBox==='events'">Your Events</div>
+    <div class="list-title" *ngIf="selectedBox==='bookers'">Users Who Booked</div>
+    <div class="list-title" *ngIf="selectedBox==='seats'">Seats Left Per Event</div>
+    <div class="list-title" *ngIf="selectedBox==='revenue'">Revenue Breakdown</div>
+    <div class="list-title" *ngIf="selectedBox==='top'">Top Event Details</div>
+
+    <div *ngIf="selectedBox==='events'">
+      <div class="list-row" *ngFor="let e of perEvent">
+        <div class="row-main">
+          <div class="row-title">{{ e?.title || 'Event' }}</div>
+          <div class="row-sub">Bookings: {{ e?.bookings ?? 0 }} · Seats: {{ e?.seatsBooked ?? 0 }}</div>
+        </div>
+      </div>
+      <div class="empty-mini" *ngIf="perEvent.length === 0">No events found.</div>
+    </div>
+
+    <div *ngIf="selectedBox==='bookers'">
+      <div class="list-row" *ngFor="let u of uniqueBookers">
+        <div class="row-main">
+          <div class="row-title">{{ u?.name || 'User' }}</div>
+          <div class="row-sub">
+            {{ u?.email || '-' }}{{ u?.eventTitle ? ' · ' + u.eventTitle : '' }}
+          </div>
+        </div>
+      </div>
+      <div class="empty-mini" *ngIf="uniqueBookers.length === 0">No booking users found.</div>
+    </div>
+
+    <div *ngIf="selectedBox==='seats'">
+      <div class="list-row" *ngFor="let s of seatsLeftPerEvent">
+        <div class="row-main">
+          <div class="row-title">{{ s?.title }}</div>
+          <div class="row-sub">Seats left: {{ s?.left === null ? '-' : s.left }}</div>
+        </div>
+      </div>
+      <div class="empty-mini" *ngIf="seatsLeftPerEvent.length === 0">No data found.</div>
+    </div>
+
+    <div *ngIf="selectedBox==='revenue'">
+      <div class="list-row">
+        <div class="row-main">
+          <div class="row-title">Total Revenue</div>
+          <div class="row-sub">₹{{ totalRevenue }}</div>
+        </div>
+      </div>
+      <div class="list-row" *ngFor="let e of perEvent">
+        <div class="row-main">
+          <div class="row-title">{{ e?.title || 'Event' }}</div>
+          <div class="row-sub">Revenue: ₹{{ e?.revenue ?? 0 }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="selectedBox==='top'">
+      <div class="list-row" *ngFor="let e of perEvent; let i = index">
+        <div class="row-main">
+          <div class="row-title">{{ i + 1 }}. {{ e?.title || 'Event' }}</div>
+          <div class="row-sub">
+            Revenue: ₹{{ e?.revenue ?? 0 }} · Bookings: {{ e?.bookings ?? 0 }}
+          </div>
+        </div>
+      </div>
+      <div class="empty-mini" *ngIf="perEvent.length === 0">No top event found.</div>
+    </div>
+  </div>
 
 </div>
+
+<ng-template #loadingBlock>
+  <div class="loading-box">Loading dashboard...</div>
+</ng-template>
+

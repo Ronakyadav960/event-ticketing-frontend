@@ -4,12 +4,26 @@
   <section class="hero">
     <div class="hero-inner">
       <div class="hero-left">
-        <div class="pill">Discover • Book • Enjoy</div>
         <h1>Book Your Next Event</h1>
-     
+
+        <div class="filter-bar">
+          <select class="select select-small" [(ngModel)]="status">
+            <option value="all">All</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="past">Past</option>
+            <option value="soldout">Sold Out</option>
+          </select>
+
+          <select class="select select-small" [(ngModel)]="sort">
+            <option value="dateAsc">Date ↑</option>
+            <option value="dateDesc">Date ↓</option>
+            <option value="priceAsc">Price ↑</option>
+            <option value="priceDesc">Price ↓</option>
+          </select>
+        </div>
+
         <div class="searchbar">
-           
-      
+
           <input
             class="search"
             placeholder="Search events by title or venue…"
@@ -18,25 +32,23 @@
           <button class="btn ghost" (click)="q=''">Clear</button>
          
         </div>
-
-        <div class="filters">
-          <select class="select" [(ngModel)]="status">
-            <option value="all">All</option>
-            <option value="upcoming">Upcoming</option>
-            <option value="past">Past</option>
-            <option value="soldout">Sold Out</option>
-          </select>
-
-          <select class="select" [(ngModel)]="sort">
-            <option value="dateAsc">Date ↑</option>
-            <option value="dateDesc">Date ↓</option>
-            <option value="priceAsc">Price ↑</option>
-            <option value="priceDesc">Price ↓</option>
-          </select>
+        <div class="category-row">
+          <button class="chip-btn" [class.active]="categoryFilter==='all'" (click)="selectCategory('all')">All</button>
+          <button
+            class="chip-btn"
+            *ngFor="let c of categories"
+            [class.active]="categoryFilter===c"
+            (click)="selectCategory(c)"
+          >
+            {{ c }}
+          </button>
         </div>
       </div>
     </div>
   </section>
+
+
+
 
   <!-- State -->
   <div *ngIf="loading" class="state">Loading events…</div>
@@ -44,7 +56,7 @@
 
   <!-- Grid -->
   <section class="grid" *ngIf="!loading">
-    <div class="card" *ngFor="let e of filtered" (click)="openEvent(e)">
+    <div class="card" [ngClass]="eventCardClass(e)" *ngFor="let e of filtered" (click)="openEvent(e)">
       <div class="poster">
         <img *ngIf="imgUrl(e); else noImg" [src]="imgUrl(e)" alt="poster" />
         <ng-template #noImg>
@@ -90,4 +102,16 @@
       No events found. Try changing filters.
     </div>
   </section>
+
+  <div *ngIf="loadingMore" class="state loading-more">Loading more eventsâ€¦</div>
+  <div *ngIf="hasMore && !loading" #sentinel class="infinite-sentinel"></div>
+  
+
 </div>     
+
+
+
+
+
+
+

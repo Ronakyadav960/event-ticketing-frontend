@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -31,10 +31,15 @@ export class DashboardService {
   }
 
   // 👑 Superadmin: Users
-  getAllUsers() {
+  getAllUsers(params?: { page?: number; limit?: number; role?: string }) {
+    let httpParams = new HttpParams();
+    if (params?.page) httpParams = httpParams.set('page', String(params.page));
+    if (params?.limit) httpParams = httpParams.set('limit', String(params.limit));
+    if (params?.role) httpParams = httpParams.set('role', params.role);
+
     return this.http.get(
       `${this.ADMIN_API}/users`,
-      this.getAuthHeaders()
+      { ...this.getAuthHeaders(), params: httpParams }
     );
   }
 
@@ -54,10 +59,14 @@ export class DashboardService {
   }
 
   // 👑 Superadmin: Events
-  getAllEvents() {
+  getAllEvents(params?: { page?: number; limit?: number }) {
+    let httpParams = new HttpParams();
+    if (params?.page) httpParams = httpParams.set('page', String(params.page));
+    if (params?.limit) httpParams = httpParams.set('limit', String(params.limit));
+
     return this.http.get(
       `${this.EVENTS_API}`,
-      this.getAuthHeaders()
+      { ...this.getAuthHeaders(), params: httpParams }
     );
   }
 
@@ -76,3 +85,4 @@ export class DashboardService {
     );
   }
 } 
+

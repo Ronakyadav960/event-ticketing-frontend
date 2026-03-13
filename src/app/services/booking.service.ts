@@ -1,6 +1,6 @@
 // src/app/services/booking.service.ts ✅ UPDATED (uses environment.apiUrl)
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
@@ -64,8 +64,12 @@ export class BookingService {
   // ==========================
   // ADMIN: GET ALL BOOKINGS
   // ==========================
-  getAllBookings(): Observable<any[]> {
-    return this.http.get<any[]>(this.API, this.getAuthHeaders());
+  getAllBookings(params?: { page?: number; limit?: number }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params?.page) httpParams = httpParams.set('page', String(params.page));
+    if (params?.limit) httpParams = httpParams.set('limit', String(params.limit));
+
+    return this.http.get<any>(this.API, { ...this.getAuthHeaders(), params: httpParams });
   }
 
   // ==========================
@@ -75,3 +79,9 @@ export class BookingService {
     return this.http.delete(`${this.API}/${id}`, this.getAuthHeaders());
   }
 }
+
+
+
+
+
+

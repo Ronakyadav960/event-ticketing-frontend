@@ -31,6 +31,7 @@ export class AppComponent implements OnDestroy {
 
   isLoginPage = false;
   isRegisterPage = false;
+  isDrawerOpen = false;
 
   constructor() {
     this.router.events
@@ -43,6 +44,7 @@ export class AppComponent implements OnDestroy {
 
         this.isLoginPage = url.includes('/login');
         this.isRegisterPage = url.includes('/register');
+        this.isDrawerOpen = false;
       });
   }
 
@@ -85,8 +87,17 @@ export class AppComponent implements OnDestroy {
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
+      this.isDrawerOpen = false;
       this.router.navigate(['/login']);
     }
+  }
+
+  toggleDrawer(): void {
+    this.isDrawerOpen = !this.isDrawerOpen;
+  }
+
+  closeDrawer(): void {
+    this.isDrawerOpen = false;
   }
 
   ngOnDestroy(): void {

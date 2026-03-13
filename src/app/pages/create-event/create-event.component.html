@@ -9,143 +9,530 @@
       </p>
     </div>
 
-    <div *ngIf="successMessage" class="success-box">✅ {{ successMessage }}</div>
-    <div *ngIf="errorMessage" class="error-box">❌ {{ errorMessage }}</div>
+    <div *ngIf="successMessage" class="success-box">Success: {{ successMessage }}</div>
+    <div *ngIf="errorMessage" class="error-box">Error: {{ errorMessage }}</div>
+
+    <div class="create-steps">
+      <button class="step-btn" [class.active]="selectedCreateStep==='basic'" (click)="selectCreateStep('basic')" type="button">
+        <div class="step-kicker">Step 1</div>
+        <div class="step-title">Basic Detail Setup</div>
+        <div class="step-meta">Title · Category · Date/Time · Location · Price</div>
+      </button>
+      <button class="step-btn" [class.active]="selectedCreateStep==='registration'" (click)="selectCreateStep('registration')" [disabled]="!canProceedBasic" type="button">
+        <div class="step-kicker">Step 2</div>
+        <div class="step-title">Registration &amp; Form Customization</div>
+        <div class="step-meta">Templates + custom fields</div>
+      </button>
+      <button class="step-btn" [class.active]="selectedCreateStep==='design'" (click)="selectCreateStep('design')" [disabled]="!canProceedBasic || !canProceedRegistration" type="button">
+        <div class="step-kicker">Step 3</div>
+        <div class="step-title">Event Look &amp; Design</div>
+        <div class="step-meta">Layouts · Themes · Fonts · Banner</div>
+      </button>
+      <button class="step-btn" [class.active]="selectedCreateStep==='images'" (click)="selectCreateStep('images')" [disabled]="!canProceedBasic || !canProceedRegistration || !canProceedDesign" type="button">
+        <div class="step-kicker">Step 4</div>
+        <div class="step-title">Image Upload</div>
+        <div class="step-meta">Banner · Gallery · Thumbnail</div>
+      </button>
+      <button class="step-btn" [class.active]="selectedCreateStep==='preview'" (click)="selectCreateStep('preview')" [disabled]="!canPublish" type="button">
+        <div class="step-kicker">Step 5</div>
+        <div class="step-title">Preview &amp; Publish</div>
+        <div class="step-meta">Review all details</div>
+      </button>
+    </div>
 
     <form (ngSubmit)="submit()" #f="ngForm">
 
-      <div class="form-group">
-        <label>Event Title</label>
-        <input
-          class="form-control"
-          [(ngModel)]="title"
-          name="title"
-          required
-          placeholder="e.g., Music Night"
-        />
-      </div>
+      <div class="step-panel" *ngIf="selectedCreateStep==='basic'">
+        <div class="panel-title">Basic Detail Setup (Required)</div>
+        <div class="panel-sub">Foundation metadata for the event.</div>
 
-      <div class="form-group">
-        <label>Description</label>
-        <textarea
-          class="form-control"
-          [(ngModel)]="description"
-          name="description"
-          rows="4"
-          placeholder="Write a short event description..."
-        ></textarea>
-      </div>
-
-      <!-- IMAGE UPLOAD -->
-      <div class="form-group">
-        <label>Event Photo</label>
-        <input
-          type="file"
-          class="form-control"
-          accept="image/png,image/jpeg,image/webp"
-          (change)="onFileSelected($event)"
-        />
-
-        <!-- Preview -->
-        <div style="margin-top:10px" *ngIf="imagePreviewUrl">
-          <div style="font-size:12px; opacity:.8; margin-bottom:6px;">Preview</div>
-          <img
-            [src]="imagePreviewUrl"
-            alt="preview"
-            style="max-width: 100%; height: auto; border-radius: 10px;"
-          />
-        </div>
-
-        <!-- Existing -->
-        <div style="margin-top:10px" *ngIf="!imagePreviewUrl && existingImageUrl">
-          <div style="font-size:12px; opacity:.8; margin-bottom:6px;">Current Photo</div>
-          <img
-            [src]="getImageUrl(existingImageUrl)"
-            alt="current"
-            style="max-width: 100%; height: auto; border-radius: 10px;"
-          />
-        </div>
-
-        <div class="hint" style="margin-top:8px">
-          Allowed: JPG/PNG/WEBP - Max 5MB - Auto resize to 1200x800
-        </div>
-      </div>
-
-      <!-- DATE -->
-      <div class="form-group">
-        <label>Date & Time</label>
-        <input
-          type="datetime-local"
-          class="form-control"
-          [(ngModel)]="date"
-          name="date"
-          required
-          [min]="minDateTimeLocal"
-        />
-
-        <div *ngIf="datePreview" class="date-preview">
-          <div class="dp-item">
-            <span class="dp-label">Date</span>
-            <span class="dp-value">{{ datePreview.dateText }}</span>
-          </div>
-          <div class="dp-item">
-            <span class="dp-label">Time</span>
-            <span class="dp-value">{{ datePreview.timeText }}</span>
-          </div>
-        </div>
-
-        <div class="hint">
-          Past date/time not allowed.
-        </div>
-      </div>
-
-      <div class="form-row">
         <div class="form-group">
-          <label>Venue</label>
+          <label>Event Title</label>
           <input
             class="form-control"
-            [(ngModel)]="venue"
-            name="venue"
+            [(ngModel)]="title"
+            name="title"
             required
-            placeholder="e.g., City Hall"
+            placeholder="e.g., Music Night"
           />
         </div>
 
         <div class="form-group">
-          <label>Price (₹)</label>
+          <label>Category</label>
+          <select class="form-control" [(ngModel)]="category" name="category" required>
+            <option value="">Select category</option>
+            <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+            <option [value]="customCategoryValue">Other (custom)</option>
+          </select>
           <input
-            type="number"
-            class="form-control"
-            [(ngModel)]="price"
-            name="price"
-            min="0"
-            required
-            placeholder="0"
+            *ngIf="category === customCategoryValue"
+            class="form-control category-custom"
+            [(ngModel)]="customCategory"
+            name="customCategory"
+            placeholder="Type your category"
           />
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <div class="editor-toolbar">
+            <button type="button" class="editor-btn" (click)="format('bold')"><b>B</b></button>
+            <button type="button" class="editor-btn" (click)="format('italic')"><i>I</i></button>
+            <button type="button" class="editor-btn" (click)="format('underline')"><u>U</u></button>
+            <select class="editor-select" [ngModelOptions]="{standalone: true}" [(ngModel)]="selectedFont" (change)="setFont(selectedFont)">
+              <option *ngFor="let f of fontOptions" [value]="f">{{ f }}</option>
+            </select>
+            <select class="editor-select" [ngModelOptions]="{standalone: true}" [(ngModel)]="selectedFontSize" (change)="setFontSize(selectedFontSize)">
+              <option *ngFor="let s of fontSizes" [value]="s">{{ s }}px</option>
+            </select>
+            <input type="color" class="editor-color" [ngModelOptions]="{standalone: true}" [(ngModel)]="selectedColor" (change)="setColor(selectedColor)" />
+          </div>
+          <div
+            #descEditor
+            class="rich-editor"
+            contenteditable="true"
+            [innerHTML]="description"
+            (input)="onDescriptionInput($event)"
+            data-placeholder="Write a short event description..."
+          ></div>
+        </div>
+
+        <div class="form-group">
+          <label>Date & Time</label>
+          <input
+            type="datetime-local"
+            class="form-control"
+            [(ngModel)]="date"
+            name="date"
+            required
+            [min]="minDateTimeLocal"
+          />
+
+          <div *ngIf="datePreview" class="date-preview">
+            <div class="dp-item">
+              <span class="dp-label">Date</span>
+              <span class="dp-value">{{ datePreview.dateText }}</span>
+            </div>
+            <div class="dp-item">
+              <span class="dp-label">Time</span>
+              <span class="dp-value">{{ datePreview.timeText }}</span>
+            </div>
+          </div>
+
+          <div class="hint">
+            Past date/time not allowed.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Location Type</label>
+          <select class="form-control" [(ngModel)]="locationType" name="locationType" required>
+            <option value="">Physical or Virtual</option>
+            <option>Physical</option>
+            <option>Virtual</option>
+            <option>Hybrid</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Location</label>
+            <input
+              class="form-control"
+              [(ngModel)]="venue"
+              name="venue"
+              required
+              placeholder="e.g., City Hall"
+            />
+          </div>
+        </div>
+
+        <div class="price-seat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Price (INR)</div>
+            <div class="stat-input">
+              <span class="stat-prefix">₹</span>
+              <input
+                type="number"
+                class="form-control stat-control"
+                [(ngModel)]="price"
+                name="price"
+                min="0"
+                required
+                placeholder="0 (Free)"
+              />
+            </div>
+            <div class="stat-hint">Set 0 to make this event free.</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Seats</div>
+            <div class="stat-input">
+              <input
+                type="number"
+                class="form-control stat-control"
+                [(ngModel)]="totalSeats"
+                name="totalSeats"
+                min="1"
+                required
+                placeholder="e.g., 150"
+              />
+              <span class="stat-suffix">seats</span>
+            </div>
+            <div class="stat-hint">Minimum 1 seat required.</div>
+          </div>
+        </div>
+
+        <div class="panel-note">This section is mandatory to proceed.</div>
+        <div class="panel-actions">
+          <button class="btn edit" type="button" [disabled]="!canProceedBasic" (click)="goNextStep()">Next</button>
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Total Seats</label>
-        <input
-          type="number"
-          class="form-control"
-          [(ngModel)]="totalSeats"
-          name="totalSeats"
-          min="1"
-          required
-          placeholder="e.g., 150"
-        />
+      <div class="step-panel" *ngIf="selectedCreateStep==='registration'">
+        <div class="panel-title">Registration &amp; Form Customization</div>
+        <div class="panel-sub">Choose a pre-built form or design your own.</div>
+        <div class="template-grid">
+          <button type="button" class="template-card" [class.selected]="registrationTemplate==='standard'" (click)="registrationTemplate='standard'">
+            <div class="template-title">Standard Registration</div>
+            <div class="template-meta">Name · Email · Phone</div>
+          </button>
+          <button type="button" class="template-card" [class.selected]="registrationTemplate==='workshop'" (click)="registrationTemplate='workshop'">
+            <div class="template-title">Workshop Form</div>
+            <div class="template-meta">Experience · Skill level</div>
+          </button>
+          <button type="button" class="template-card" [class.selected]="registrationTemplate==='seminar'" (click)="registrationTemplate='seminar'">
+            <div class="template-title">Seminar Form</div>
+            <div class="template-meta">Company · Designation</div>
+          </button>
+        </div>
+        <div class="custom-fields">
+          <div class="custom-title">Custom Fields</div>
+
+          <div class="custom-form">
+            <input
+              class="form-control"
+              [(ngModel)]="customFieldDraft.label"
+              name="customFieldLabel"
+              placeholder="Field label (e.g., Company Size)"
+            />
+            <select
+              class="form-control"
+              [(ngModel)]="customFieldDraft.type"
+              name="customFieldType"
+            >
+              <option value="text">Text</option>
+              <option value="email">Email</option>
+              <option value="phone">Phone</option>
+              <option value="number">Number</option>
+              <option value="textarea">Textarea</option>
+              <option value="select">Dropdown</option>
+              <option value="checkbox">Checkbox</option>
+            </select>
+            <label class="check-row">
+              <input type="checkbox" [(ngModel)]="customFieldDraft.required" name="customFieldRequired" />
+              <span>Required</span>
+            </label>
+            <input
+              *ngIf="customFieldDraft.type === 'select'"
+              class="form-control"
+              [(ngModel)]="customFieldDraft.optionsText"
+              name="customFieldOptions"
+              placeholder="Options (comma separated)"
+            />
+            <button class="btn ghost" type="button" (click)="addCustomField()">Add Field</button>
+            <div class="hint error" *ngIf="customFieldError">{{ customFieldError }}</div>
+          </div>
+
+          <div class="custom-list" *ngIf="customFields.length">
+            <div class="custom-item" *ngFor="let f of customFields; let i = index">
+              <div class="custom-item-title">{{ f.label }}</div>
+              <div class="custom-item-meta">
+                {{ f.type }}<span *ngIf="f.required"> • required</span>
+                <span *ngIf="f.options?.length"> • {{ (f.options || []).join(', ') }}</span>
+              </div>
+              <button class="btn ghost small" type="button" (click)="removeCustomField(i)">Remove</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel-actions">
+          <button class="btn ghost" type="button" (click)="goPrevStep()">Back</button>
+          <button class="btn edit" type="button" [disabled]="!canProceedRegistration" (click)="goNextStep()">Next</button>
+        </div>
       </div>
 
-      <button
-        type="submit"
-        class="btn create-btn w-100"
-        [disabled]="f.invalid || loading"
-      >
-        {{ loading ? '⏳ Please wait...' : (isEdit ? '💾 Update Event' : '🚀 Publish Event') }}
-      </button>
+      <div class="step-panel" *ngIf="selectedCreateStep==='design'">
+        <div class="panel-title">Event Look &amp; Design</div>
+        <div class="panel-sub">Pick a layout or fully customize branding.</div>
+        <div class="template-grid">
+          <button type="button" class="template-card" [class.selected]="designTemplate==='clean-hero'" (click)="designTemplate='clean-hero'">
+            <div class="template-title">Clean Hero Layout</div>
+            <div class="template-meta">Light · Wide banner</div>
+          </button>
+          <button type="button" class="template-card" [class.selected]="designTemplate==='bold-split'" (click)="designTemplate='bold-split'">
+            <div class="template-title">Bold Split Layout</div>
+            <div class="template-meta">Dark · High contrast</div>
+          </button>
+          <button type="button" class="template-card" [class.selected]="designTemplate==='editorial'" (click)="designTemplate='editorial'">
+            <div class="template-title">Editorial Layout</div>
+            <div class="template-meta">Serif · Sectioned</div>
+          </button>
+          <button type="button" class="template-card" [class.selected]="designTemplate==='movie'" (click)="designTemplate='movie'">
+            <div class="template-title">Movie Showcase</div>
+            <div class="template-meta">Poster + ticket panel</div>
+          </button>
+          <button type="button" class="template-card" [class.selected]="designTemplate==='concert'" (click)="designTemplate='concert'">
+            <div class="template-title">Concert Night</div>
+            <div class="template-meta">Neon hero + lineup</div>
+          </button>
+          <button type="button" class="template-card" [class.selected]="designTemplate==='comedy'" (click)="designTemplate='comedy'">
+            <div class="template-title">Comedy Spotlight</div>
+            <div class="template-meta">Warm highlight + CTA</div>
+          </button>
+        </div>
+        <div class="design-controls">
+          <div class="form-group">
+            <label>Hero Kicker</label>
+            <input class="form-control" [(ngModel)]="designConfig.heroKicker" name="heroKicker" placeholder="e.g., Live Concert" />
+          </div>
+          <div class="form-group">
+            <label>Badge Text</label>
+            <input class="form-control" [(ngModel)]="designConfig.badgeText" name="badgeText" placeholder="e.g., Book Now" />
+          </div>
+          <div class="form-group">
+            <label>CTA Button Text</label>
+            <input class="form-control" [(ngModel)]="designConfig.ctaText" name="ctaText" placeholder="e.g., Get Tickets" />
+          </div>
+          <div class="form-group">
+            <label>Primary Color</label>
+            <input type="color" class="form-control" [(ngModel)]="designConfig.themeColor" name="themeColor" />
+          </div>
+          <div class="form-group">
+            <label>Accent Color</label>
+            <input type="color" class="form-control" [ngModelOptions]="{standalone: true}" ngModel />
+          </div>
+          <div class="form-group">
+            <label>Font Style</label>
+            <select class="form-control" [ngModelOptions]="{standalone: true}" ngModel>
+              <option>Grotesk Modern</option>
+              <option>Elegant Serif</option>
+              <option>Tech Mono</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Banner Placement</label>
+            <select class="form-control" [ngModelOptions]="{standalone: true}" ngModel>
+              <option>Top Hero</option>
+              <option>Split Banner</option>
+              <option>Full Bleed</option>
+            </select>
+          </div>
+        </div>
+        <div class="design-preview">
+          <div class="preview-head">
+            <div class="preview-title">Live Preview</div>
+            <button class="btn ghost small" type="button" (click)="applyPreview()">Apply Now</button>
+          </div>
+          <ng-container [ngSwitch]="designTemplate">
+            <div *ngSwitchCase="'movie'" class="preview-card movie-preview" [style.--theme-color]="designConfig.themeColor">
+              <div class="preview-left">
+                <div class="preview-poster">
+                  <img *ngIf="previewImageUrl; else previewNoImg" [src]="previewImageUrl" alt="poster" />
+                  <ng-template #previewNoImg>
+                    <div class="preview-fallback">No Image</div>
+                  </ng-template>
+                </div>
+                <div class="preview-tags">
+                  <span class="tag">{{ resolvedCategory || 'Movie' }}</span>
+                  <span class="tag">{{ locationType || 'In-person' }}</span>
+                </div>
+              </div>
+              <div class="preview-right">
+                <div class="preview-kicker">{{ designConfig.heroKicker || 'Live Event' }}</div>
+                <div class="preview-name">{{ title || 'Event Title' }}</div>
+                <div class="preview-meta">{{ venue || 'Venue' }} · {{ datePreview?.dateText || 'Date' }}</div>
+                <div class="preview-price">From ₹{{ price }}</div>
+                <button class="preview-btn" type="button">{{ designConfig.badgeText || 'Book Now' }}</button>
+              </div>
+            </div>
+
+            <div *ngSwitchCase="'concert'" class="preview-card concert-preview" [style.--theme-color]="designConfig.themeColor">
+              <div class="concert-hero" [ngStyle]="{'background-image': previewImageUrl ? 'url(' + previewImageUrl + ')' : ''}">
+                <div class="concert-overlay"></div>
+                <div class="concert-text">
+                  <div class="preview-kicker">{{ designConfig.heroKicker || 'Live Concert' }}</div>
+                  <div class="preview-name">{{ title || 'Event Title' }}</div>
+                  <div class="preview-meta">{{ venue || 'Venue' }} · {{ datePreview?.dateText || 'Date' }}</div>
+                  <button class="preview-btn" type="button">{{ designConfig.ctaText || 'Get Tickets' }}</button>
+                </div>
+              </div>
+            </div>
+
+            <div *ngSwitchCase="'comedy'" class="preview-card comedy-preview" [style.--theme-color]="designConfig.themeColor">
+              <div class="comedy-left">
+                <div class="preview-name">{{ title || 'Event Title' }}</div>
+                <div class="preview-meta">{{ venue || 'Venue' }} · {{ datePreview?.dateText || 'Date' }}</div>
+                <div class="preview-desc">{{ description || 'Short description of the event.' }}</div>
+                <button class="preview-btn" type="button">{{ designConfig.ctaText || 'Book Seats' }}</button>
+              </div>
+              <div class="comedy-right">
+                <div class="preview-poster">
+                  <img *ngIf="previewImageUrl; else previewNoImg2" [src]="previewImageUrl" alt="poster" />
+                  <ng-template #previewNoImg2>
+                    <div class="preview-fallback">No Image</div>
+                  </ng-template>
+                </div>
+              </div>
+            </div>
+
+            <div *ngSwitchDefault class="preview-card default-preview" [style.--theme-color]="designConfig.themeColor">
+              <div class="preview-name">{{ title || 'Event Title' }}</div>
+              <div class="preview-meta">{{ venue || 'Venue' }} · {{ datePreview?.dateText || 'Date' }}</div>
+              <div class="preview-desc">{{ description || 'Short description of the event.' }}</div>
+              <button class="preview-btn" type="button">{{ designConfig.ctaText || 'Book Now' }}</button>
+            </div>
+          </ng-container>
+        </div>
+        <div class="panel-actions">
+          <button class="btn ghost" type="button" (click)="goPrevStep()">Back</button>
+          <button class="btn edit" type="button" [disabled]="!canProceedDesign" (click)="goNextStep()">Next</button>
+        </div>
+      </div>
+
+      <div class="step-panel" *ngIf="selectedCreateStep==='images'">
+        <div class="panel-title">Image Upload</div>
+        <div class="panel-sub">Upload JPG/PNG/WebP. Max 5MB.</div>
+        <div class="template-grid">
+          <button type="button" class="template-card preset" [class.selected]="imagePreset==='preset-a'" (click)="imagePreset='preset-a'">
+            <div class="template-title">Preset A</div>
+            <div class="template-meta">Minimal banner</div>
+          </button>
+          <button type="button" class="template-card preset" [class.selected]="imagePreset==='preset-b'" (click)="imagePreset='preset-b'">
+            <div class="template-title">Preset B</div>
+            <div class="template-meta">Gradient hero</div>
+          </button>
+          <button type="button" class="template-card preset" [class.selected]="imagePreset==='preset-c'" (click)="imagePreset='preset-c'">
+            <div class="template-title">Preset C</div>
+            <div class="template-meta">Photo overlay</div>
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label>Event Photo</label>
+          <input
+            type="file"
+            class="form-control"
+            accept="image/png,image/jpeg,image/webp"
+            (change)="onFileSelected($event)"
+          />
+
+          <div style="margin-top:10px" *ngIf="imagePreviewUrl">
+            <div style="font-size:12px; opacity:.8; margin-bottom:6px;">Preview</div>
+            <img
+              [src]="imagePreviewUrl"
+              alt="preview"
+              style="max-width: 100%; height: auto; border-radius: 10px;"
+            />
+          </div>
+
+          <div style="margin-top:10px" *ngIf="!imagePreviewUrl && existingImageUrl">
+            <div style="font-size:12px; opacity:.8; margin-bottom:6px;">Current Photo</div>
+            <img
+              [src]="getImageUrl(existingImageUrl)"
+              alt="current"
+              style="max-width: 100%; height: auto; border-radius: 10px;"
+            />
+          </div>
+
+          <div class="hint" style="margin-top:8px">
+            Allowed: JPG/PNG/WEBP - Max 5MB - Auto resize to 1200x800
+          </div>
+        </div>
+
+        <div class="panel-actions">
+          <button class="btn ghost" type="button" (click)="goPrevStep()">Back</button>
+          <button class="btn edit" type="button" [disabled]="!canProceedImages" (click)="goNextStep()">Next</button>
+        </div>
+      </div>
+
+      <div class="step-panel" *ngIf="selectedCreateStep==='preview'">
+        <div class="panel-title">Preview &amp; Publish</div>
+        <div class="panel-sub">Review all details before publishing.</div>
+
+        <div class="preview-grid">
+          <div class="preview-item">
+            <div class="preview-label">Title</div>
+            <div class="preview-value">{{ title || '-' }}</div>
+          </div>
+          <div class="preview-item">
+            <div class="preview-label">Description</div>
+            <div class="preview-value" [innerHTML]="description || '-'"></div>
+          </div>
+          <div class="preview-item">
+            <div class="preview-label">Category</div>
+            <div class="preview-value">{{ resolvedCategory || '-' }}</div>
+          </div>
+          <div class="preview-item">
+            <div class="preview-label">Date &amp; Time</div>
+            <div class="preview-value">{{ datePreview?.dateText || '-' }} {{ datePreview?.timeText || '' }}</div>
+          </div>
+          <div class="preview-item">
+            <div class="preview-label">Location Type</div>
+            <div class="preview-value">{{ locationType || '-' }}</div>
+          </div>
+          <div class="preview-item">
+            <div class="preview-label">Location</div>
+            <div class="preview-value">{{ venue || '-' }}</div>
+          </div>
+          <div class="preview-item">
+            <div class="preview-label">Price</div>
+            <div class="preview-value">{{ price === 0 ? 'Free' : price }}</div>
+          </div>
+          <div class="preview-item">
+            <div class="preview-label">Total Seats</div>
+            <div class="preview-value">{{ totalSeats }}</div>
+          </div>
+          <div class="preview-item">
+            <div class="preview-label">Registration</div>
+            <div class="preview-value">{{ registrationTemplate }}</div>
+          </div>
+          <div class="preview-item">
+            <div class="preview-label">Design</div>
+            <div class="preview-value">{{ designTemplate }}</div>
+          </div>
+          <div class="preview-item">
+            <div class="preview-label">Image Preset</div>
+            <div class="preview-value">{{ imagePreset }}</div>
+          </div>
+        </div>
+
+        <div class="preview-image" *ngIf="imagePreviewUrl || existingImageUrl">
+          <div class="preview-label">Preview Image</div>
+          <img
+            [src]="imagePreviewUrl || getImageUrl(existingImageUrl)"
+            alt="event preview"
+          />
+        </div>
+
+        <div class="panel-actions">
+          <button class="btn ghost" type="button" (click)="goPrevStep()">Back</button>
+          <button
+            type="submit"
+            class="btn create-btn"
+            [disabled]="!canPublish || loading"
+          >
+            {{ loading ? 'Please wait...' : (isEdit ? 'Update Event' : 'Publish Event') }}
+          </button>
+        </div>
+      </div>
 
     </form>
   </div>
 </div>
+
+
+
+
+
+
+
+
