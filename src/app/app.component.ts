@@ -88,7 +88,7 @@ export class AppComponent implements OnDestroy {
       console.error('Logout error:', err);
     } finally {
       this.isDrawerOpen = false;
-      this.router.navigate(['/login']);
+      this.router.navigate(['/events']);
     }
   }
 

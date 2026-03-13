@@ -24,7 +24,7 @@ export const routes: Routes = [
   { path: 'register', component: RegisterComponent, canActivate: [guestGuard] },
 
   // ---------- USER ----------
-  { path: 'events', component: EventsComponent, canActivate: [authGuard] },
+  { path: 'events', component: EventsComponent },
   { path: 'events/:id', component: EventDetailsComponent, canActivate: [authGuard] },
   { path: 'history', component: BookingHistoryComponent, canActivate: [authGuard] },
 

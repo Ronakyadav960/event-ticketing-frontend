@@ -19,9 +19,9 @@
     <!-- ================= RIGHT SIDE ================= -->
     <div class="right">
 
-      <!-- Only LOGIN button on login/register pages -->
       <button
         *ngIf="!isLoggedIn"
+        class="login-btn"
         routerLink="/login">
         Login
       </button>
