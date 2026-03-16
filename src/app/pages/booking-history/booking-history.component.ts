@@ -1,9 +1,8 @@
-import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject, ElementRef, ViewChild, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { BookingService } from '../../services/booking.service';
-import { finalize, take } from 'rxjs/operators';
 
 @Component({
   standalone: true,
@@ -12,46 +11,67 @@ import { finalize, take } from 'rxjs/operators';
   templateUrl: './booking-history.component.html',
   styleUrls: ['./booking-history.component.css']
 })
-export class BookingHistoryComponent implements OnInit {
+export class BookingHistoryComponent implements OnInit, OnDestroy {
   private bs = inject(BookingService);
   private cdr = inject(ChangeDetectorRef);
 
   bookings: any[] = [];
   loading = true;
+  loadingMore = false;
   error = '';
 
-  ngOnInit(): void {
-    this.loading = true;
-    this.error = '';
+  private page = 1;
+  private readonly pageSize = 10;
+  hasMore = true;
+  private observer?: IntersectionObserver;
 
-    this.bs.getMyBookings()
-      .pipe(
-        take(1),
-        finalize(() => {
-          this.loading = false;
-          this.cdr.detectChanges();
-        })
-      )
-      .subscribe({
-        next: (res: any) => {
-          const list = Array.isArray(res) ? res : (res?.data ?? []);
-          this.bookings = this.sortBookings(list);
-          this.cdr.detectChanges();
-        },
-        error: (err: any) => {
-          this.error =
-            err?.error?.message ||
-            err?.message ||
-            'Unable to load booking history.';
-          console.error('getMyBookings error:', err);
-          this.cdr.detectChanges();
-        }
-      });
+  @ViewChild('sentinel') set sentinelRef(el: ElementRef<HTMLDivElement> | undefined) {
+    if (!el) return;
+    this.setupObserver(el.nativeElement);
   }
 
-  private sortBookings(list: any[]) {
-    const copy = [...list];
-    return copy.sort((a, b) => this.getBookingTime(b) - this.getBookingTime(a));
+  ngOnInit(): void {
+    this.fetchBookings(true);
+  }
+
+  fetchBookings(reset = false): void {
+    if (!reset && (!this.hasMore || this.loadingMore)) return;
+
+    if (reset) {
+      this.page = 1;
+      this.hasMore = true;
+      this.bookings = [];
+      this.loading = true;
+    } else {
+      this.loadingMore = true;
+    }
+
+    this.error = '';
+
+    // Uses GET /api/bookings with pagination; backend auto-scopes to current user if not admin.
+    this.bs.getAllBookings({ page: this.page, limit: this.pageSize }).subscribe({
+      next: (res: any) => {
+        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        this.bookings = reset ? list : [...this.bookings, ...list];
+
+        const totalPages = Number(res?.totalPages) || 1;
+        const currentPage = Number(res?.page) || this.page;
+        this.hasMore = currentPage < totalPages && list.length > 0;
+        this.page = currentPage + 1;
+
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        this.error = err?.error?.message || err?.message || 'Unable to load booking history.';
+        console.error('getAllBookings (history) error:', err);
+        this.cdr.detectChanges();
+      },
+      complete: () => {
+        this.loading = false;
+        this.loadingMore = false;
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   private getBookingTime(b: any) {
@@ -90,5 +110,24 @@ export class BookingHistoryComponent implements OnInit {
     return key
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  private setupObserver(target: HTMLDivElement) {
+    if (this.observer) this.observer.disconnect();
+
+    this.observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          this.fetchBookings(false);
+        }
+      },
+      { rootMargin: '200px 0px', threshold: 0.1 }
+    );
+
+    this.observer.observe(target);
+  }
+
+  ngOnDestroy(): void {
+    if (this.observer) this.observer.disconnect();
   }
 }

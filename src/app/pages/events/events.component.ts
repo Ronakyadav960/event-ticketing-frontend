@@ -3,6 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { EventService } from '../../services/event.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -37,10 +38,8 @@ export class EventsComponent implements OnInit, OnDestroy {
   sort: 'dateAsc' | 'dateDesc' | 'priceAsc' | 'priceDesc' = 'dateAsc';
   categoryFilter = 'all';
 
-  // base url for images served from backend
-  BASE = window.location.hostname === 'localhost'
-  ? 'http://localhost:5000'
-  : 'https://event-ticketing-backend-1.onrender.com';
+  // Base URL for images served from backend (env-based for dev/prod)
+  BASE = environment.apiUrl;
 
 
   ngOnInit(): void {

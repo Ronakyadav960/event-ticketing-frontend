@@ -148,6 +148,10 @@
   font-size: 12px;
 }
 
+.infinite-sentinel {
+  height: 1px;
+}
+
 @media (max-width: 700px) {
   .history-head {
     flex-direction: column;

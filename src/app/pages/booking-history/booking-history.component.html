@@ -41,6 +41,12 @@
     </div>
   </div>
 
+  <div class="card" *ngIf="!loading && !error && loadingMore">
+    Loading more bookings...
+  </div>
+
+  <div *ngIf="hasMore && !loading && !error" #sentinel class="infinite-sentinel"></div>
+
   <div class="card empty" *ngIf="!loading && !error && bookings.length === 0">
     No bookings yet.
   </div>

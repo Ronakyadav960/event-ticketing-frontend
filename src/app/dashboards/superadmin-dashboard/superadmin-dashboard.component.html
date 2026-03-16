@@ -69,14 +69,14 @@
 
     <div *ngIf="selectedTop==='creators'">
       <div class="loading-mini" *ngIf="loadingUsers">Loading users...</div>
-      <div class="list-row" *ngFor="let u of pagedCreators">
+      <div class="list-row clickable" *ngFor="let u of pagedCreators" (click)="openDetails('creators', u)">
         <div class="row-main">
           <div class="row-title">{{ u?.name || '-' }}</div>
           <div class="row-sub">{{ u?.email || '-' }} · {{ u?.role || '-' }}</div>
         </div>
         <div class="row-actions">
-          <button class="btn small edit" (click)="editUser(u)">Edit</button>
-          <button class="btn small danger" (click)="deleteUser(u)">Delete</button>
+          <button class="btn small edit" (click)="$event.stopPropagation(); editUser(u)">Edit</button>
+          <button class="btn small danger" (click)="$event.stopPropagation(); deleteUser(u)">Delete</button>
         </div>
       </div>
       <div class="empty-mini" *ngIf="!loadingUsers && creatorUsers.length === 0">No creators found.</div>
@@ -89,14 +89,14 @@
 
     <div *ngIf="selectedTop==='users'">
       <div class="loading-mini" *ngIf="loadingUsers">Loading users...</div>
-      <div class="list-row" *ngFor="let u of pagedUsers">
+      <div class="list-row clickable" *ngFor="let u of pagedUsers" (click)="openDetails('users', u)">
         <div class="row-main">
           <div class="row-title">{{ u?.name || '-' }}</div>
           <div class="row-sub">{{ u?.email || '-' }} · {{ u?.role || '-' }}</div>
         </div>
         <div class="row-actions">
-          <button class="btn small edit" (click)="editUser(u)">Edit</button>
-          <button class="btn small danger" (click)="deleteUser(u)">Delete</button>
+          <button class="btn small edit" (click)="$event.stopPropagation(); editUser(u)">Edit</button>
+          <button class="btn small danger" (click)="$event.stopPropagation(); deleteUser(u)">Delete</button>
         </div>
       </div>
       <div class="empty-mini" *ngIf="!loadingUsers && onlyUsers.length === 0">No users found.</div>
@@ -109,14 +109,14 @@
 
     <div *ngIf="selectedTop==='events'">
       <div class="loading-mini" *ngIf="loadingEvents">Loading events...</div>
-      <div class="list-row" *ngFor="let e of pagedEvents">
+      <div class="list-row clickable" *ngFor="let e of pagedEvents" (click)="openDetails('events', e)">
         <div class="row-main">
           <div class="row-title">{{ e?.title || '-' }}</div>
           <div class="row-sub">{{ e?.venue || '-' }} · {{ e?.date | date:'medium' }}</div>
         </div>
         <div class="row-actions">
-          <button class="btn small edit" (click)="editEvent(e)">Edit</button>
-          <button class="btn small danger" (click)="deleteEvent(e)">Delete</button>
+          <button class="btn small edit" (click)="$event.stopPropagation(); editEvent(e)">Edit</button>
+          <button class="btn small danger" (click)="$event.stopPropagation(); deleteEvent(e)">Delete</button>
         </div>
       </div>
       <div class="empty-mini" *ngIf="!loadingEvents && events.length === 0">No events found.</div>
@@ -129,7 +129,7 @@
 
     <div *ngIf="selectedTop==='bookings'">
       <div class="loading-mini" *ngIf="loadingBookings">Loading bookings...</div>
-      <div class="list-row" *ngFor="let b of pagedBookings">
+      <div class="list-row clickable" *ngFor="let b of pagedBookings" (click)="openDetails('bookings', b)">
         <div class="row-main">
           <div class="row-title">{{ b?.event?.title || 'Event' }}</div>
           <div class="row-sub">
@@ -137,7 +137,7 @@
           </div>
         </div>
         <div class="row-actions">
-          <button class="btn small danger" (click)="deleteBooking(b)">Delete</button>
+          <button class="btn small danger" (click)="$event.stopPropagation(); deleteBooking(b)">Delete</button>
         </div>
       </div>
       <div class="empty-mini" *ngIf="!loadingBookings && bookings.length === 0">No bookings found.</div>
@@ -176,5 +176,99 @@
     Loading dashboard...
   </div>
 </ng-template>
+
+<!-- DETAILS MODAL -->
+<div class="modal-backdrop" *ngIf="detailModalOpen" (click)="closeDetails()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title">
+        <ng-container [ngSwitch]="detailKind">
+          <span *ngSwitchCase="'creators'">Creator Details</span>
+          <span *ngSwitchCase="'users'">User Details</span>
+          <span *ngSwitchCase="'events'">Event Details</span>
+          <span *ngSwitchCase="'bookings'">Booking Details</span>
+          <span *ngSwitchDefault>Details</span>
+        </ng-container>
+      </div>
+      <button class="modal-close" type="button" (click)="closeDetails()">&times;</button>
+    </div>
+
+    <div class="modal-body" *ngIf="detailItem">
+      <ng-container [ngSwitch]="detailKind">
+        <ng-container *ngSwitchCase="'creators'">
+          <div class="hero">
+            <div class="hero-name">{{ detailItem?.name || '-' }}</div>
+            <div class="pill">{{ detailItem?.role || 'creator' }}</div>
+          </div>
+          <div class="kv">
+            <div class="k">Email</div><div class="v">{{ detailItem?.email || '-' }}</div>
+            <div class="k">User ID</div><div class="v mono">{{ detailItem?._id || detailItem?.id || '-' }}</div>
+            <div class="k">Created</div><div class="v">{{ detailItem?.createdAt ? (detailItem.createdAt | date:'medium') : '-' }}</div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn edit" type="button" (click)="closeDetails(); editUser(detailItem)">Edit</button>
+            <button class="btn danger" type="button" (click)="deleteUser(detailItem)">Delete</button>
+          </div>
+        </ng-container>
+
+        <ng-container *ngSwitchCase="'users'">
+          <div class="hero">
+            <div class="hero-name">{{ detailItem?.name || '-' }}</div>
+            <div class="pill">{{ detailItem?.role || 'user' }}</div>
+          </div>
+          <div class="kv">
+            <div class="k">Email</div><div class="v">{{ detailItem?.email || '-' }}</div>
+            <div class="k">User ID</div><div class="v mono">{{ detailItem?._id || detailItem?.id || '-' }}</div>
+            <div class="k">Created</div><div class="v">{{ detailItem?.createdAt ? (detailItem.createdAt | date:'medium') : '-' }}</div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn edit" type="button" (click)="closeDetails(); editUser(detailItem)">Edit</button>
+            <button class="btn danger" type="button" (click)="deleteUser(detailItem)">Delete</button>
+          </div>
+        </ng-container>
+
+        <ng-container *ngSwitchCase="'events'">
+          <div class="hero">
+            <div class="hero-name">{{ detailItem?.title || '-' }}</div>
+            <div class="pill">{{ detailItem?.category || 'Event' }}</div>
+          </div>
+          <div class="kv">
+            <div class="k">Date</div><div class="v">{{ detailItem?.date ? (detailItem.date | date:'fullDate') : '-' }}</div>
+            <div class="k">Time</div><div class="v">{{ detailItem?.date ? (detailItem.date | date:'shortTime') : '-' }}</div>
+            <div class="k">Venue</div><div class="v">{{ detailItem?.venue || '-' }}</div>
+            <div class="k">Price</div><div class="v">Rs {{ detailItem?.price ?? 0 }}</div>
+            <div class="k">Seats</div><div class="v">{{ detailItem?.bookedSeats ?? 0 }}/{{ detailItem?.totalSeats ?? 0 }}</div>
+            <div class="k">Created By</div><div class="v">{{ getCreatorName(detailItem) }}</div>
+            <div class="k">Event ID</div><div class="v mono">{{ detailItem?._id || detailItem?.id || '-' }}</div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn ghost" type="button" (click)="viewEventFromModal()">View</button>
+            <button class="btn edit" type="button" (click)="closeDetails(); editEvent(detailItem)">Edit</button>
+            <button class="btn danger" type="button" (click)="deleteEvent(detailItem)">Delete</button>
+          </div>
+        </ng-container>
+
+        <ng-container *ngSwitchCase="'bookings'">
+          <div class="hero">
+            <div class="hero-name">{{ detailItem?.event?.title || 'Event' }}</div>
+            <div class="pill">Seats {{ detailItem?.seats ?? 1 }}</div>
+          </div>
+          <div class="kv">
+            <div class="k">Ticket</div><div class="v mono">{{ detailItem?.ticketId || '-' }}</div>
+            <div class="k">Booked By</div><div class="v">{{ detailItem?.user?.name || detailItem?.name || 'User' }}</div>
+            <div class="k">Email</div><div class="v">{{ detailItem?.user?.email || detailItem?.email || '-' }}</div>
+            <div class="k">Booked At</div><div class="v">{{ detailItem?.createdAt ? (detailItem.createdAt | date:'medium') : '-' }}</div>
+            <div class="k">Status</div><div class="v">{{ detailItem?.paymentStatus || '-' }}</div>
+            <div class="k">Booking ID</div><div class="v mono">{{ detailItem?._id || detailItem?.id || '-' }}</div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn ghost" type="button" (click)="viewTicketFromModal()" [disabled]="!detailItem?.ticketId">View Ticket</button>
+            <button class="btn danger" type="button" (click)="deleteBooking(detailItem)">Delete</button>
+          </div>
+        </ng-container>
+      </ng-container>
+    </div>
+  </div>
+</div>
 
 

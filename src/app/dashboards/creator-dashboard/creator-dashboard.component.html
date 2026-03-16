@@ -53,7 +53,7 @@
     <div class="list-title" *ngIf="selectedBox==='top'">Top Event Details</div>
 
     <div *ngIf="selectedBox==='events'">
-      <div class="list-row" *ngFor="let e of perEvent">
+      <div class="list-row clickable" *ngFor="let e of perEvent" (click)="openDetails('events', e)">
         <div class="row-main">
           <div class="row-title">{{ e?.title || 'Event' }}</div>
           <div class="row-sub">Bookings: {{ e?.bookings ?? 0 }} · Seats: {{ e?.seatsBooked ?? 0 }}</div>
@@ -63,7 +63,7 @@
     </div>
 
     <div *ngIf="selectedBox==='bookers'">
-      <div class="list-row" *ngFor="let u of uniqueBookers">
+      <div class="list-row clickable" *ngFor="let u of uniqueBookers" (click)="openDetails('bookers', u)">
         <div class="row-main">
           <div class="row-title">{{ u?.name || 'User' }}</div>
           <div class="row-sub">
@@ -75,7 +75,7 @@
     </div>
 
     <div *ngIf="selectedBox==='seats'">
-      <div class="list-row" *ngFor="let s of seatsLeftPerEvent">
+      <div class="list-row clickable" *ngFor="let s of seatsLeftPerEvent" (click)="openDetails('seats', s)">
         <div class="row-main">
           <div class="row-title">{{ s?.title }}</div>
           <div class="row-sub">Seats left: {{ s?.left === null ? '-' : s.left }}</div>
@@ -91,7 +91,7 @@
           <div class="row-sub">₹{{ totalRevenue }}</div>
         </div>
       </div>
-      <div class="list-row" *ngFor="let e of perEvent">
+      <div class="list-row clickable" *ngFor="let e of perEvent" (click)="openDetails('revenue', e)">
         <div class="row-main">
           <div class="row-title">{{ e?.title || 'Event' }}</div>
           <div class="row-sub">Revenue: ₹{{ e?.revenue ?? 0 }}</div>
@@ -100,7 +100,7 @@
     </div>
 
     <div *ngIf="selectedBox==='top'">
-      <div class="list-row" *ngFor="let e of perEvent; let i = index">
+      <div class="list-row clickable" *ngFor="let e of perEvent; let i = index" (click)="openDetails('top', e)">
         <div class="row-main">
           <div class="row-title">{{ i + 1 }}. {{ e?.title || 'Event' }}</div>
           <div class="row-sub">
@@ -117,4 +117,99 @@
 <ng-template #loadingBlock>
   <div class="loading-box">Loading dashboard...</div>
 </ng-template>
+
+<!-- DETAILS MODAL -->
+<div class="modal-backdrop" *ngIf="detailModalOpen" (click)="closeDetails()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title">
+        <ng-container [ngSwitch]="detailKind">
+          <span *ngSwitchCase="'events'">Event Details</span>
+          <span *ngSwitchCase="'revenue'">Revenue Details</span>
+          <span *ngSwitchCase="'top'">Top Event Details</span>
+          <span *ngSwitchCase="'bookers'">User Details</span>
+          <span *ngSwitchCase="'seats'">Seats Details</span>
+          <span *ngSwitchDefault>Details</span>
+        </ng-container>
+      </div>
+      <button class="modal-close" type="button" (click)="closeDetails()">&times;</button>
+    </div>
+
+    <div class="modal-body" *ngIf="detailItem">
+      <ng-container [ngSwitch]="detailKind">
+        <ng-container *ngSwitchCase="'events'">
+          <div class="hero">
+            <div class="hero-name">{{ detailItem?.title || 'Event' }}</div>
+            <div class="pill">Bookings {{ detailItem?.bookings ?? 0 }}</div>
+          </div>
+          <div class="kv">
+            <div class="k">Seats Booked</div><div class="v">{{ detailItem?.seatsBooked ?? 0 }}</div>
+            <div class="k">Total Seats</div><div class="v">{{ detailItem?.totalSeats ?? '-' }}</div>
+            <div class="k">Revenue</div><div class="v">Rs {{ detailItem?.revenue ?? 0 }}</div>
+            <div class="k">Event ID</div><div class="v mono">{{ detailItem?.eventId || '-' }}</div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn ghost" type="button" (click)="viewEventFromModal()" [disabled]="!detailItem?.eventId">View</button>
+            <button class="btn edit" type="button" (click)="editEventFromModal()" [disabled]="!detailItem?.eventId">Edit</button>
+          </div>
+        </ng-container>
+
+        <ng-container *ngSwitchCase="'revenue'">
+          <div class="hero">
+            <div class="hero-name">{{ detailItem?.title || 'Event' }}</div>
+            <div class="pill">Rs {{ detailItem?.revenue ?? 0 }}</div>
+          </div>
+          <div class="kv">
+            <div class="k">Bookings</div><div class="v">{{ detailItem?.bookings ?? 0 }}</div>
+            <div class="k">Seats Booked</div><div class="v">{{ detailItem?.seatsBooked ?? 0 }}</div>
+            <div class="k">Total Seats</div><div class="v">{{ detailItem?.totalSeats ?? '-' }}</div>
+            <div class="k">Event ID</div><div class="v mono">{{ detailItem?.eventId || '-' }}</div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn ghost" type="button" (click)="viewEventFromModal()" [disabled]="!detailItem?.eventId">View</button>
+            <button class="btn edit" type="button" (click)="editEventFromModal()" [disabled]="!detailItem?.eventId">Edit</button>
+          </div>
+        </ng-container>
+
+        <ng-container *ngSwitchCase="'top'">
+          <div class="hero">
+            <div class="hero-name">{{ detailItem?.title || 'Event' }}</div>
+            <div class="pill">Ranked</div>
+          </div>
+          <div class="kv">
+            <div class="k">Revenue</div><div class="v">Rs {{ detailItem?.revenue ?? 0 }}</div>
+            <div class="k">Bookings</div><div class="v">{{ detailItem?.bookings ?? 0 }}</div>
+            <div class="k">Seats Booked</div><div class="v">{{ detailItem?.seatsBooked ?? 0 }}</div>
+            <div class="k">Event ID</div><div class="v mono">{{ detailItem?.eventId || '-' }}</div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn ghost" type="button" (click)="viewEventFromModal()" [disabled]="!detailItem?.eventId">View</button>
+            <button class="btn edit" type="button" (click)="editEventFromModal()" [disabled]="!detailItem?.eventId">Edit</button>
+          </div>
+        </ng-container>
+
+        <ng-container *ngSwitchCase="'bookers'">
+          <div class="hero">
+            <div class="hero-name">{{ detailItem?.name || 'User' }}</div>
+            <div class="pill">Booker</div>
+          </div>
+          <div class="kv">
+            <div class="k">Email</div><div class="v">{{ detailItem?.email || '-' }}</div>
+            <div class="k">Event</div><div class="v">{{ detailItem?.eventTitle || '-' }}</div>
+          </div>
+        </ng-container>
+
+        <ng-container *ngSwitchCase="'seats'">
+          <div class="hero">
+            <div class="hero-name">{{ detailItem?.title || 'Event' }}</div>
+            <div class="pill">Seats</div>
+          </div>
+          <div class="kv">
+            <div class="k">Seats Left</div><div class="v">{{ detailItem?.left === null ? '-' : detailItem.left }}</div>
+          </div>
+        </ng-container>
+      </ng-container>
+    </div>
+  </div>
+</div>
 

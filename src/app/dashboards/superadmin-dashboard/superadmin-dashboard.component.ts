@@ -35,8 +35,11 @@ export class SuperadminDashboardComponent implements OnInit {
   loadingUsers = false;
   loadingEvents = false;
   loadingBookings = false;
-  showCreatorModal = false;
-  selectedCreator: any = null;
+
+  detailModalOpen = false;
+  detailKind: 'creators' | 'users' | 'events' | 'bookings' | null = null;
+  detailItem: any = null;
+
   selectedTop: 'creators' | 'users' | 'events' | 'bookings' | null = null;
   selectedSecondary: 'upcoming' | 'creatorsWithEvents' | 'past' | null = null;
 
@@ -78,14 +81,30 @@ export class SuperadminDashboardComponent implements OnInit {
     });
   }
 
-  openCreatorModal(c: any) {
-    this.selectedCreator = c;
-    this.showCreatorModal = true;
+  openDetails(kind: 'creators' | 'users' | 'events' | 'bookings', item: any) {
+    this.detailKind = kind;
+    this.detailItem = item;
+    this.detailModalOpen = true;
   }
 
-  closeCreatorModal() {
-    this.showCreatorModal = false;
-    this.selectedCreator = null;
+  closeDetails() {
+    this.detailModalOpen = false;
+    this.detailKind = null;
+    this.detailItem = null;
+  }
+
+  viewTicketFromModal() {
+    const tid = String(this.detailItem?.ticketId || '');
+    if (!tid) return;
+    this.closeDetails();
+    this.router.navigate(['/booking', tid]);
+  }
+
+  viewEventFromModal() {
+    const id = String(this.detailItem?._id || this.detailItem?.id || '');
+    if (!id) return;
+    this.closeDetails();
+    this.router.navigate(['/events', id]);
   }
 
   selectTop(key: 'creators' | 'users' | 'events' | 'bookings') {

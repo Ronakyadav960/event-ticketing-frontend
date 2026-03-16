@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
 
 @Component({
@@ -16,7 +17,11 @@ export class CreatorDashboardComponent implements OnInit {
   errorMsg = '';
   selectedBox: 'events' | 'bookers' | 'seats' | 'revenue' | 'top' | null = null;
 
-  constructor(private dashboardService: DashboardService) {}
+  detailModalOpen = false;
+  detailKind: 'events' | 'bookers' | 'seats' | 'revenue' | 'top' | null = null;
+  detailItem: any = null;
+
+  constructor(private dashboardService: DashboardService, private router: Router) {}
 
   ngOnInit() {
     this.loading = true;
@@ -35,6 +40,32 @@ export class CreatorDashboardComponent implements OnInit {
 
   selectBox(key: 'events' | 'bookers' | 'seats' | 'revenue' | 'top') {
     this.selectedBox = this.selectedBox === key ? null : key;
+  }
+
+  openDetails(kind: 'events' | 'bookers' | 'seats' | 'revenue' | 'top', item: any) {
+    this.detailKind = kind;
+    this.detailItem = item;
+    this.detailModalOpen = true;
+  }
+
+  closeDetails() {
+    this.detailModalOpen = false;
+    this.detailKind = null;
+    this.detailItem = null;
+  }
+
+  viewEventFromModal() {
+    const id = String(this.detailItem?.eventId || this.detailItem?._id || this.detailItem?.id || '');
+    if (!id) return;
+    this.closeDetails();
+    this.router.navigate(['/events', id]);
+  }
+
+  editEventFromModal() {
+    const id = String(this.detailItem?.eventId || this.detailItem?._id || this.detailItem?.id || '');
+    if (!id) return;
+    this.closeDetails();
+    this.router.navigate(['/create-event'], { queryParams: { id } });
   }
 
   get perEvent(): any[] {

@@ -5,6 +5,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
+import { environment } from '../../../environments/environment';
+
 import { EventService } from '../../services/event.service';
 import { BookingService } from '../../services/booking.service';
 
@@ -734,7 +736,7 @@ export class EventDetailsComponent implements OnInit {
   msg = '';
   showBookingForm = false;
 
-  private BASE = 'http://localhost:5000';
+  private BASE = environment.apiUrl;
   bgStyle: Record<string, string> = {};
 
   get registrationTemplate(): string {
