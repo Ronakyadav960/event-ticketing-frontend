@@ -243,6 +243,10 @@
   flex-wrap: wrap;
 }
 
+.row-actions .btn.ghost {
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
 .loading-mini {
   padding: 8px 0 12px;
   font-size: 12px;
@@ -321,19 +325,25 @@
 
 /* ================= MODAL ================= */
 
-.modal-backdrop {
+/* Avoid Bootstrap's .modal/.modal-backdrop collisions */
+.dash-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(2, 6, 23, 0.72);
-  backdrop-filter: blur(8px);
+  /* Prefer a strong dim overlay over blur (mobile-friendly + consistent) */
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 18px;
-  z-index: 10000;
+  z-index: 2147483647;
+  pointer-events: auto;
+  opacity: 1;
+  animation: backdropIn 120ms ease-out;
 }
 
-.modal {
+.dash-modal {
   width: min(720px, 100%);
   max-height: 85vh;
   overflow: auto;
@@ -342,9 +352,11 @@
   background: rgba(15, 23, 42, 0.92);
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
   padding: 16px;
+  transform: translateZ(0);
+  animation: modalIn 140ms ease-out;
 }
 
-.modal-head {
+.dash-modal-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -352,14 +364,14 @@
   margin-bottom: 10px;
 }
 
-.modal-title {
+.dash-modal-title {
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.4px;
   color: #f8fafc;
 }
 
-.modal-close {
+.dash-modal-close {
   width: 34px;
   height: 34px;
   border-radius: 10px;
@@ -371,9 +383,19 @@
   line-height: 1;
 }
 
-.modal-body {
+.dash-modal-body {
   display: grid;
   gap: 12px;
+}
+
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .hero {
@@ -432,7 +454,7 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-.modal-actions {
+.dash-modal-actions {
   display: flex;
   gap: 10px;
   justify-content: flex-end;

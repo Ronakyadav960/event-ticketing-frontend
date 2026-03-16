@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -55,7 +55,8 @@ export class SuperadminDashboardComponent implements OnInit {
   constructor(
     private dashboardService: DashboardService,
     private bookingService: BookingService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -85,12 +86,14 @@ export class SuperadminDashboardComponent implements OnInit {
     this.detailKind = kind;
     this.detailItem = item;
     this.detailModalOpen = true;
+    this.cdr.detectChanges();
   }
 
   closeDetails() {
     this.detailModalOpen = false;
     this.detailKind = null;
     this.detailItem = null;
+    this.cdr.detectChanges();
   }
 
   viewTicketFromModal() {

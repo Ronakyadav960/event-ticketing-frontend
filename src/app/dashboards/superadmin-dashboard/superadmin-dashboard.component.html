@@ -75,6 +75,7 @@
           <div class="row-sub">{{ u?.email || '-' }} · {{ u?.role || '-' }}</div>
         </div>
         <div class="row-actions">
+          <button class="btn small ghost" type="button" (click)="$event.stopPropagation(); openDetails('creators', u)">Details</button>
           <button class="btn small edit" (click)="$event.stopPropagation(); editUser(u)">Edit</button>
           <button class="btn small danger" (click)="$event.stopPropagation(); deleteUser(u)">Delete</button>
         </div>
@@ -95,6 +96,7 @@
           <div class="row-sub">{{ u?.email || '-' }} · {{ u?.role || '-' }}</div>
         </div>
         <div class="row-actions">
+          <button class="btn small ghost" type="button" (click)="$event.stopPropagation(); openDetails('users', u)">Details</button>
           <button class="btn small edit" (click)="$event.stopPropagation(); editUser(u)">Edit</button>
           <button class="btn small danger" (click)="$event.stopPropagation(); deleteUser(u)">Delete</button>
         </div>
@@ -115,6 +117,7 @@
           <div class="row-sub">{{ e?.venue || '-' }} · {{ e?.date | date:'medium' }}</div>
         </div>
         <div class="row-actions">
+          <button class="btn small ghost" type="button" (click)="$event.stopPropagation(); openDetails('events', e)">Details</button>
           <button class="btn small edit" (click)="$event.stopPropagation(); editEvent(e)">Edit</button>
           <button class="btn small danger" (click)="$event.stopPropagation(); deleteEvent(e)">Delete</button>
         </div>
@@ -137,6 +140,7 @@
           </div>
         </div>
         <div class="row-actions">
+          <button class="btn small ghost" type="button" (click)="$event.stopPropagation(); openDetails('bookings', b)">Details</button>
           <button class="btn small danger" (click)="$event.stopPropagation(); deleteBooking(b)">Delete</button>
         </div>
       </div>
@@ -178,10 +182,10 @@
 </ng-template>
 
 <!-- DETAILS MODAL -->
-<div class="modal-backdrop" *ngIf="detailModalOpen" (click)="closeDetails()">
-  <div class="modal" (click)="$event.stopPropagation()">
-    <div class="modal-head">
-      <div class="modal-title">
+<div class="dash-modal-backdrop" *ngIf="detailModalOpen" (click)="closeDetails()">
+  <div class="dash-modal" (click)="$event.stopPropagation()">
+    <div class="dash-modal-head">
+      <div class="dash-modal-title">
         <ng-container [ngSwitch]="detailKind">
           <span *ngSwitchCase="'creators'">Creator Details</span>
           <span *ngSwitchCase="'users'">User Details</span>
@@ -190,10 +194,10 @@
           <span *ngSwitchDefault>Details</span>
         </ng-container>
       </div>
-      <button class="modal-close" type="button" (click)="closeDetails()">&times;</button>
+      <button class="dash-modal-close" type="button" (click)="closeDetails()">&times;</button>
     </div>
 
-    <div class="modal-body" *ngIf="detailItem">
+    <div class="dash-modal-body" *ngIf="detailItem">
       <ng-container [ngSwitch]="detailKind">
         <ng-container *ngSwitchCase="'creators'">
           <div class="hero">
@@ -205,7 +209,7 @@
             <div class="k">User ID</div><div class="v mono">{{ detailItem?._id || detailItem?.id || '-' }}</div>
             <div class="k">Created</div><div class="v">{{ detailItem?.createdAt ? (detailItem.createdAt | date:'medium') : '-' }}</div>
           </div>
-          <div class="modal-actions">
+          <div class="dash-modal-actions">
             <button class="btn edit" type="button" (click)="closeDetails(); editUser(detailItem)">Edit</button>
             <button class="btn danger" type="button" (click)="deleteUser(detailItem)">Delete</button>
           </div>
@@ -221,7 +225,7 @@
             <div class="k">User ID</div><div class="v mono">{{ detailItem?._id || detailItem?.id || '-' }}</div>
             <div class="k">Created</div><div class="v">{{ detailItem?.createdAt ? (detailItem.createdAt | date:'medium') : '-' }}</div>
           </div>
-          <div class="modal-actions">
+          <div class="dash-modal-actions">
             <button class="btn edit" type="button" (click)="closeDetails(); editUser(detailItem)">Edit</button>
             <button class="btn danger" type="button" (click)="deleteUser(detailItem)">Delete</button>
           </div>
@@ -241,7 +245,7 @@
             <div class="k">Created By</div><div class="v">{{ getCreatorName(detailItem) }}</div>
             <div class="k">Event ID</div><div class="v mono">{{ detailItem?._id || detailItem?.id || '-' }}</div>
           </div>
-          <div class="modal-actions">
+          <div class="dash-modal-actions">
             <button class="btn ghost" type="button" (click)="viewEventFromModal()">View</button>
             <button class="btn edit" type="button" (click)="closeDetails(); editEvent(detailItem)">Edit</button>
             <button class="btn danger" type="button" (click)="deleteEvent(detailItem)">Delete</button>
@@ -261,7 +265,7 @@
             <div class="k">Status</div><div class="v">{{ detailItem?.paymentStatus || '-' }}</div>
             <div class="k">Booking ID</div><div class="v mono">{{ detailItem?._id || detailItem?.id || '-' }}</div>
           </div>
-          <div class="modal-actions">
+          <div class="dash-modal-actions">
             <button class="btn ghost" type="button" (click)="viewTicketFromModal()" [disabled]="!detailItem?.ticketId">View Ticket</button>
             <button class="btn danger" type="button" (click)="deleteBooking(detailItem)">Delete</button>
           </div>

@@ -119,10 +119,10 @@
 </ng-template>
 
 <!-- DETAILS MODAL -->
-<div class="modal-backdrop" *ngIf="detailModalOpen" (click)="closeDetails()">
-  <div class="modal" (click)="$event.stopPropagation()">
-    <div class="modal-head">
-      <div class="modal-title">
+<div class="dash-modal-backdrop" *ngIf="detailModalOpen" (click)="closeDetails()">
+  <div class="dash-modal" (click)="$event.stopPropagation()">
+    <div class="dash-modal-head">
+      <div class="dash-modal-title">
         <ng-container [ngSwitch]="detailKind">
           <span *ngSwitchCase="'events'">Event Details</span>
           <span *ngSwitchCase="'revenue'">Revenue Details</span>
@@ -132,10 +132,10 @@
           <span *ngSwitchDefault>Details</span>
         </ng-container>
       </div>
-      <button class="modal-close" type="button" (click)="closeDetails()">&times;</button>
+      <button class="dash-modal-close" type="button" (click)="closeDetails()">&times;</button>
     </div>
 
-    <div class="modal-body" *ngIf="detailItem">
+    <div class="dash-modal-body" *ngIf="detailItem">
       <ng-container [ngSwitch]="detailKind">
         <ng-container *ngSwitchCase="'events'">
           <div class="hero">
@@ -148,7 +148,7 @@
             <div class="k">Revenue</div><div class="v">Rs {{ detailItem?.revenue ?? 0 }}</div>
             <div class="k">Event ID</div><div class="v mono">{{ detailItem?.eventId || '-' }}</div>
           </div>
-          <div class="modal-actions">
+          <div class="dash-modal-actions">
             <button class="btn ghost" type="button" (click)="viewEventFromModal()" [disabled]="!detailItem?.eventId">View</button>
             <button class="btn edit" type="button" (click)="editEventFromModal()" [disabled]="!detailItem?.eventId">Edit</button>
           </div>
@@ -165,7 +165,7 @@
             <div class="k">Total Seats</div><div class="v">{{ detailItem?.totalSeats ?? '-' }}</div>
             <div class="k">Event ID</div><div class="v mono">{{ detailItem?.eventId || '-' }}</div>
           </div>
-          <div class="modal-actions">
+          <div class="dash-modal-actions">
             <button class="btn ghost" type="button" (click)="viewEventFromModal()" [disabled]="!detailItem?.eventId">View</button>
             <button class="btn edit" type="button" (click)="editEventFromModal()" [disabled]="!detailItem?.eventId">Edit</button>
           </div>
@@ -182,7 +182,7 @@
             <div class="k">Seats Booked</div><div class="v">{{ detailItem?.seatsBooked ?? 0 }}</div>
             <div class="k">Event ID</div><div class="v mono">{{ detailItem?.eventId || '-' }}</div>
           </div>
-          <div class="modal-actions">
+          <div class="dash-modal-actions">
             <button class="btn ghost" type="button" (click)="viewEventFromModal()" [disabled]="!detailItem?.eventId">View</button>
             <button class="btn edit" type="button" (click)="editEventFromModal()" [disabled]="!detailItem?.eventId">Edit</button>
           </div>
