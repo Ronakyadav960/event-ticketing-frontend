@@ -194,7 +194,12 @@ export class EventService {
 
     if (e?.imageUrl) return this.normalizeImageUrl(e.imageUrl);
 
-    return id ? `${base}/api/events/${id}/image` : '';
+    // If backend doesn't provide an imageUrl, treat as "no image" unless we know a file exists.
+    if (e?.imageFileId) {
+      return id ? `${base}/api/events/${id}/image` : '';
+    }
+
+    return '';
   }
 }
 

@@ -58,7 +58,7 @@
   <section class="grid" *ngIf="!loading">
     <div class="card" [ngClass]="eventCardClass(e)" *ngFor="let e of filtered" (click)="openEvent(e)">
       <div class="poster">
-        <img *ngIf="imgUrl(e); else noImg" [src]="imgUrl(e)" alt="poster" />
+        <img *ngIf="shouldShowImg(e); else noImg" [src]="imgUrl(e)" (error)="onImgError(e)" alt="poster" />
         <ng-template #noImg>
           <div class="noimg">No Image</div>
         </ng-template>

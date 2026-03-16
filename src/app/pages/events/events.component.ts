@@ -3,7 +3,6 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { EventService } from '../../services/event.service';
-import { environment } from '../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -38,8 +37,7 @@ export class EventsComponent implements OnInit, OnDestroy {
   sort: 'dateAsc' | 'dateDesc' | 'priceAsc' | 'priceDesc' = 'dateAsc';
   categoryFilter = 'all';
 
-  // Base URL for images served from backend (env-based for dev/prod)
-  BASE = environment.apiUrl;
+  private imgErrorIds = new Set<string>();
 
 
   ngOnInit(): void {
@@ -87,6 +85,7 @@ export class EventsComponent implements OnInit, OnDestroy {
         const currentPage = Number(res?.page) || this.page;
         this.hasMore = currentPage < totalPages && list.length > 0;
         this.page = currentPage + 1;
+        if (reset) this.imgErrorIds.clear();
       },
       error: (err: any) => {
         this.error = err?.error?.message || 'Failed to load events.';
@@ -98,10 +97,25 @@ export class EventsComponent implements OnInit, OnDestroy {
     });
   }
 
- imgUrl(e: any): string {
-  const id = e?._id || e?.id;
-  return id ? `${this.BASE}/api/events/${id}/image` : '';
-}
+  private eventIdOf(e: any): string {
+    return String(e?._id || e?.id || '');
+  }
+
+  imgUrl(e: any): string {
+    return this.es.getEventImageUrl(e);
+  }
+
+  onImgError(e: any): void {
+    const id = this.eventIdOf(e);
+    if (!id) return;
+    this.imgErrorIds.add(id);
+  }
+
+  shouldShowImg(e: any): boolean {
+    const id = this.eventIdOf(e);
+    if (!id) return false;
+    return !!this.imgUrl(e) && !this.imgErrorIds.has(id);
+  }
 
 
   remainingSeats(e: any): number {

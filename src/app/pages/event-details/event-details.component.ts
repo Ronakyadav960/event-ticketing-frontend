@@ -30,7 +30,7 @@ import { BookingService } from '../../services/booking.service';
                 <div class="layout movie-layout" [style.--theme-color]="designThemeColor">
                   <div class="movie-left">
                     <div class="hero-media">
-                      <img *ngIf="eventImageUrl; else movieNoImg" [src]="eventImageUrl" alt="poster" />
+                      <img *ngIf="eventImageUrl && !eventImgFailed; else movieNoImg" [src]="eventImageUrl" (error)="onEventImgError()" alt="poster" />
                       <ng-template #movieNoImg>
                         <div class="poster-fallback">No Image</div>
                       </ng-template>
@@ -90,7 +90,7 @@ import { BookingService } from '../../services/booking.service';
                     </div>
                     <div class="comedy-right">
                       <div class="hero-media square">
-                        <img *ngIf="eventImageUrl; else comedyNoImg" [src]="eventImageUrl" alt="poster" />
+                        <img *ngIf="eventImageUrl && !eventImgFailed; else comedyNoImg" [src]="eventImageUrl" (error)="onEventImgError()" alt="poster" />
                         <ng-template #comedyNoImg>
                           <div class="poster-fallback">No Image</div>
                         </ng-template>
@@ -124,7 +124,7 @@ import { BookingService } from '../../services/booking.service';
                       </div>
                     </div>
                     <div class="hero-media wide">
-                      <img *ngIf="eventImageUrl; else defaultNoImg" [src]="eventImageUrl" alt="poster" />
+                      <img *ngIf="eventImageUrl && !eventImgFailed; else defaultNoImg" [src]="eventImageUrl" (error)="onEventImgError()" alt="poster" />
                       <ng-template #defaultNoImg>
                         <div class="poster-fallback">No Image</div>
                       </ng-template>
@@ -736,6 +736,8 @@ export class EventDetailsComponent implements OnInit {
   msg = '';
   showBookingForm = false;
 
+  eventImgFailed = false;
+
   private BASE = environment.apiUrl;
   bgStyle: Record<string, string> = {};
 
@@ -782,9 +784,8 @@ export class EventDetailsComponent implements OnInit {
     return 'Clean Hero Layout';
   }
 
-  get eventImageUrl(): string {
-    const id = this.event?._id || this.event?.id;
-    return id ? `${this.BASE}/api/events/${id}/image` : '';
+    get eventImageUrl(): string {
+    return this.es.getEventImageUrl(this.event);
   }
 
   get designConfig(): any {
@@ -837,6 +838,10 @@ export class EventDetailsComponent implements OnInit {
     this.showBookingForm = false;
   }
 
+  onEventImgError() {
+    this.eventImgFailed = true;
+  }
+
   onCancelBooking() {
     this.closeBooking();
     const el = document.querySelector('.details-wrap');
@@ -863,8 +868,9 @@ export class EventDetailsComponent implements OnInit {
         const ev = res?.event ?? res?.data ?? res;
         this.event = ev;
 
-        const id = ev?._id || ev?.id;
-        const full = id ? `${this.BASE}/api/events/${id}/image` : '';
+        this.eventImgFailed = false;
+
+        const full = this.es.getEventImageUrl(ev);
 
         this.bgStyle = full ? { 'background-image': `url('${full}')` } : {};
 
