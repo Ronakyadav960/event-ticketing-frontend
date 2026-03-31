@@ -4,6 +4,9 @@ export interface Event {
   title: string;
   description?: string;     // ✅ optional
   date: string;
+  startDate?: string;
+  endDate?: string;
+  showTimes?: string[];
   venue: string;
   price: number;
   totalSeats: number;

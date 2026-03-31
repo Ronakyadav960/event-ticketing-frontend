@@ -46,11 +46,11 @@ import { AuthService } from '../../auth/auth.service';
               <div class="meta-grid">
                 <div class="meta-item">
                   <div class="meta-label">Date</div>
-                  <div class="meta-value">{{ (booking?.event?.date || booking?.eventDate || booking?.createdAt) | date:'fullDate' }}</div>
+                  <div class="meta-value">{{ (booking?.showAt || booking?.event?.date || booking?.eventDate || booking?.createdAt) | date:'fullDate' }}</div>
                 </div>
                 <div class="meta-item">
                   <div class="meta-label">Time</div>
-                  <div class="meta-value">{{ (booking?.event?.date || booking?.eventDate || booking?.createdAt) | date:'shortTime' }}</div>
+                  <div class="meta-value">{{ (booking?.showAt || booking?.event?.date || booking?.eventDate || booking?.createdAt) | date:'shortTime' }}</div>
                 </div>
                 <div class="meta-item">
                   <div class="meta-label">Venue</div>

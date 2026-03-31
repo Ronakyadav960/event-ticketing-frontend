@@ -1,5 +1,4 @@
-<div class="dashboard">
-
+﻿<div class="dashboard">
   <div class="dashboard-header">
     <div>
       <h2>Creator Dashboard</h2>
@@ -8,208 +7,125 @@
   </div>
 
   <div class="error-box" *ngIf="errorMsg">{{ errorMsg }}</div>
+  <div class="loading-box" *ngIf="loading">Loading dashboard...</div>
 
-  <div class="graph-card" *ngIf="data; else loadingBlock">
-    <div class="graph-title">Bookings Per Event</div>
-    <div class="graph-bars">
-      <div class="bar-wrap" *ngFor="let item of graphSeries">
-        <div class="bar" [style.height.%]="item.height">
-          <div class="bar-value">{{ item.count }}</div>
-        </div>
-        <div class="bar-label">{{ item.label }}</div>
-      </div>
+  <div class="kpi-grid" *ngIf="!loading">
+    <div class="kpi-card">
+      <div class="kpi-label">My Events</div>
+      <div class="kpi-value">{{ myEventsCount }}</div>
     </div>
-    <div class="graph-note">Events shown with ranking and booking counts</div>
-  </div>
-
-  <div class="top-buttons" *ngIf="data">
-    <button class="stat-btn" [class.active]="selectedBox==='events'" (click)="selectBox('events')">
-      Events Created
-      <span class="stat-value">{{ eventsCount }}</span>
-    </button>
-    <button class="stat-btn" [class.active]="selectedBox==='bookers'" (click)="selectBox('bookers')">
-      Booked Users
-      <span class="stat-value">{{ uniqueBookers.length }}</span>
-    </button>
-    <button class="stat-btn" [class.active]="selectedBox==='seats'" (click)="selectBox('seats')">
-      Seats Remaining
-      <span class="stat-value">{{ perEvent.length }}</span>
-    </button>
-    <button class="stat-btn" [class.active]="selectedBox==='revenue'" (click)="selectBox('revenue')">
-      Total Revenue
-      <span class="stat-value">₹{{ totalRevenue }}</span>
-    </button>
-    <button class="stat-btn" [class.active]="selectedBox==='top'" (click)="selectBox('top')">
-      Top Event
-      <span class="stat-value">{{ topEvent?.title || '-' }}</span>
-    </button>
-  </div>
-
-  <div class="detail-box" *ngIf="selectedBox">
-    <div class="list-title" *ngIf="selectedBox==='events'">Your Events</div>
-    <div class="list-title" *ngIf="selectedBox==='bookers'">Users Who Booked</div>
-    <div class="list-title" *ngIf="selectedBox==='seats'">Seats Left Per Event</div>
-    <div class="list-title" *ngIf="selectedBox==='revenue'">Revenue Breakdown</div>
-    <div class="list-title" *ngIf="selectedBox==='top'">Top Event Details</div>
-
-    <div *ngIf="selectedBox==='events'">
-      <div class="list-row clickable" *ngFor="let e of perEvent" (click)="openDetails('events', e)">
-        <div class="row-main">
-          <div class="row-title">{{ e?.title || 'Event' }}</div>
-          <div class="row-sub">Bookings: {{ e?.bookings ?? 0 }} · Seats: {{ e?.seatsBooked ?? 0 }}</div>
-        </div>
-      </div>
-      <div class="empty-mini" *ngIf="perEvent.length === 0">No events found.</div>
+    <div class="kpi-card">
+      <div class="kpi-label">Upcoming Events</div>
+      <div class="kpi-value">{{ upcomingEventsCount }}</div>
     </div>
-
-    <div *ngIf="selectedBox==='bookers'">
-      <div class="list-row clickable" *ngFor="let u of uniqueBookers" (click)="openDetails('bookers', u)">
-        <div class="row-main">
-          <div class="row-title">{{ u?.name || 'User' }}</div>
-          <div class="row-sub">
-            {{ u?.email || '-' }}{{ u?.eventTitle ? ' · ' + u.eventTitle : '' }}
-          </div>
-        </div>
-      </div>
-      <div class="empty-mini" *ngIf="uniqueBookers.length === 0">No booking users found.</div>
+    <div class="kpi-card">
+      <div class="kpi-label">Tickets Sold</div>
+      <div class="kpi-value">{{ ticketsSold }}</div>
     </div>
-
-    <div *ngIf="selectedBox==='seats'">
-      <div class="list-row clickable" *ngFor="let s of seatsLeftPerEvent" (click)="openDetails('seats', s)">
-        <div class="row-main">
-          <div class="row-title">{{ s?.title }}</div>
-          <div class="row-sub">Seats left: {{ s?.left === null ? '-' : s.left }}</div>
-        </div>
-      </div>
-      <div class="empty-mini" *ngIf="seatsLeftPerEvent.length === 0">No data found.</div>
+    <div class="kpi-card">
+      <div class="kpi-label">Revenue</div>
+      <div class="kpi-value">Rs {{ totalRevenue }}</div>
     </div>
-
-    <div *ngIf="selectedBox==='revenue'">
-      <div class="list-row">
-        <div class="row-main">
-          <div class="row-title">Total Revenue</div>
-          <div class="row-sub">₹{{ totalRevenue }}</div>
-        </div>
-      </div>
-      <div class="list-row clickable" *ngFor="let e of perEvent" (click)="openDetails('revenue', e)">
-        <div class="row-main">
-          <div class="row-title">{{ e?.title || 'Event' }}</div>
-          <div class="row-sub">Revenue: ₹{{ e?.revenue ?? 0 }}</div>
-        </div>
-      </div>
-    </div>
-
-    <div *ngIf="selectedBox==='top'">
-      <div class="list-row clickable" *ngFor="let e of perEvent; let i = index" (click)="openDetails('top', e)">
-        <div class="row-main">
-          <div class="row-title">{{ i + 1 }}. {{ e?.title || 'Event' }}</div>
-          <div class="row-sub">
-            Revenue: ₹{{ e?.revenue ?? 0 }} · Bookings: {{ e?.bookings ?? 0 }}
-          </div>
-        </div>
-      </div>
-      <div class="empty-mini" *ngIf="perEvent.length === 0">No top event found.</div>
+    <div class="kpi-card">
+      <div class="kpi-label">Sold Out</div>
+      <div class="kpi-value">{{ soldOutCount }}</div>
     </div>
   </div>
 
-</div>
-
-<ng-template #loadingBlock>
-  <div class="loading-box">Loading dashboard...</div>
-</ng-template>
-
-<!-- DETAILS MODAL -->
-<div class="dash-modal-backdrop" *ngIf="detailModalOpen" (click)="closeDetails()">
-  <div class="dash-modal" (click)="$event.stopPropagation()">
-    <div class="dash-modal-head">
-      <div class="dash-modal-title">
-        <ng-container [ngSwitch]="detailKind">
-          <span *ngSwitchCase="'events'">Event Details</span>
-          <span *ngSwitchCase="'revenue'">Revenue Details</span>
-          <span *ngSwitchCase="'top'">Top Event Details</span>
-          <span *ngSwitchCase="'bookers'">User Details</span>
-          <span *ngSwitchCase="'seats'">Seats Details</span>
-          <span *ngSwitchDefault>Details</span>
-        </ng-container>
+  <div class="charts-grid" *ngIf="!loading">
+    <div class="chart-card">
+      <div class="chart-head">
+        <div class="chart-title">Bookings (last {{ rangeDays }} days)</div>
+        <div class="chart-toggle">
+          <button class="toggle-btn" [class.active]="rangeDays===7" type="button" (click)="setRange(7)">7d</button>
+          <button class="toggle-btn" [class.active]="rangeDays===30" type="button" (click)="setRange(30)">30d</button>
+        </div>
       </div>
-      <button class="dash-modal-close" type="button" (click)="closeDetails()">&times;</button>
+      <svg class="line" viewBox="0 0 300 100" preserveAspectRatio="none" aria-label="Bookings line chart">
+        <polyline class="line-path" [attr.points]="bookingsLinePoints"></polyline>
+      </svg>
+      <div class="chart-x">
+        <span *ngFor="let p of dailySeries">{{ p.label }}</span>
+      </div>
     </div>
 
-    <div class="dash-modal-body" *ngIf="detailItem">
-      <ng-container [ngSwitch]="detailKind">
-        <ng-container *ngSwitchCase="'events'">
-          <div class="hero">
-            <div class="hero-name">{{ detailItem?.title || 'Event' }}</div>
-            <div class="pill">Bookings {{ detailItem?.bookings ?? 0 }}</div>
-          </div>
-          <div class="kv">
-            <div class="k">Seats Booked</div><div class="v">{{ detailItem?.seatsBooked ?? 0 }}</div>
-            <div class="k">Total Seats</div><div class="v">{{ detailItem?.totalSeats ?? '-' }}</div>
-            <div class="k">Revenue</div><div class="v">Rs {{ detailItem?.revenue ?? 0 }}</div>
-            <div class="k">Event ID</div><div class="v mono">{{ detailItem?.eventId || '-' }}</div>
-          </div>
-          <div class="dash-modal-actions">
-            <button class="btn ghost" type="button" (click)="viewEventFromModal()" [disabled]="!detailItem?.eventId">View</button>
-            <button class="btn edit" type="button" (click)="editEventFromModal()" [disabled]="!detailItem?.eventId">Edit</button>
-          </div>
-        </ng-container>
+    <div class="chart-card">
+      <div class="chart-head">
+        <div class="chart-title">Revenue (last {{ rangeDays }} days)</div>
+      </div>
+      <svg class="line" viewBox="0 0 300 100" preserveAspectRatio="none" aria-label="Revenue line chart">
+        <polyline class="line-path revenue" [attr.points]="revenueLinePoints"></polyline>
+      </svg>
+      <div class="chart-x">
+        <span *ngFor="let p of dailySeries">{{ p.label }}</span>
+      </div>
+    </div>
+  </div>
 
-        <ng-container *ngSwitchCase="'revenue'">
-          <div class="hero">
-            <div class="hero-name">{{ detailItem?.title || 'Event' }}</div>
-            <div class="pill">Rs {{ detailItem?.revenue ?? 0 }}</div>
-          </div>
-          <div class="kv">
-            <div class="k">Bookings</div><div class="v">{{ detailItem?.bookings ?? 0 }}</div>
-            <div class="k">Seats Booked</div><div class="v">{{ detailItem?.seatsBooked ?? 0 }}</div>
-            <div class="k">Total Seats</div><div class="v">{{ detailItem?.totalSeats ?? '-' }}</div>
-            <div class="k">Event ID</div><div class="v mono">{{ detailItem?.eventId || '-' }}</div>
-          </div>
-          <div class="dash-modal-actions">
-            <button class="btn ghost" type="button" (click)="viewEventFromModal()" [disabled]="!detailItem?.eventId">View</button>
-            <button class="btn edit" type="button" (click)="editEventFromModal()" [disabled]="!detailItem?.eventId">Edit</button>
-          </div>
-        </ng-container>
+  <div class="bars-grid" *ngIf="!loading">
+    <div class="bar-card">
+      <div class="bar-title">Top 5 events by tickets sold</div>
+      <div class="bar-row" *ngFor="let e of top5ByTickets">
+        <div class="bar-name">{{ e.title }}</div>
+        <div class="bar-track">
+          <div class="bar-fill" [style.width.%]="(e.value / maxValue(top5ByTickets)) * 100"></div>
+        </div>
+        <div class="bar-num">{{ e.value }}</div>
+      </div>
+    </div>
 
-        <ng-container *ngSwitchCase="'top'">
-          <div class="hero">
-            <div class="hero-name">{{ detailItem?.title || 'Event' }}</div>
-            <div class="pill">Ranked</div>
-          </div>
-          <div class="kv">
-            <div class="k">Revenue</div><div class="v">Rs {{ detailItem?.revenue ?? 0 }}</div>
-            <div class="k">Bookings</div><div class="v">{{ detailItem?.bookings ?? 0 }}</div>
-            <div class="k">Seats Booked</div><div class="v">{{ detailItem?.seatsBooked ?? 0 }}</div>
-            <div class="k">Event ID</div><div class="v mono">{{ detailItem?.eventId || '-' }}</div>
-          </div>
-          <div class="dash-modal-actions">
-            <button class="btn ghost" type="button" (click)="viewEventFromModal()" [disabled]="!detailItem?.eventId">View</button>
-            <button class="btn edit" type="button" (click)="editEventFromModal()" [disabled]="!detailItem?.eventId">Edit</button>
-          </div>
-        </ng-container>
+    <div class="bar-card">
+      <div class="bar-title">Top 5 events by revenue</div>
+      <div class="bar-row" *ngFor="let e of top5ByRevenue">
+        <div class="bar-name">{{ e.title }}</div>
+        <div class="bar-track">
+          <div class="bar-fill revenue" [style.width.%]="(e.value / maxValue(top5ByRevenue)) * 100"></div>
+        </div>
+        <div class="bar-num">Rs {{ e.value }}</div>
+      </div>
+    </div>
+  </div>
 
-        <ng-container *ngSwitchCase="'bookers'">
-          <div class="hero">
-            <div class="hero-name">{{ detailItem?.name || 'User' }}</div>
-            <div class="pill">Booker</div>
-          </div>
-          <div class="kv">
-            <div class="k">Email</div><div class="v">{{ detailItem?.email || '-' }}</div>
-            <div class="k">Event</div><div class="v">{{ detailItem?.eventTitle || '-' }}</div>
-          </div>
-        </ng-container>
+  <div class="table-card" *ngIf="!loading">
+    <div class="table-head">
+      <div class="table-title">My Events</div>
+    </div>
 
-        <ng-container *ngSwitchCase="'seats'">
-          <div class="hero">
-            <div class="hero-name">{{ detailItem?.title || 'Event' }}</div>
-            <div class="pill">Seats</div>
-          </div>
-          <div class="kv">
-            <div class="k">Seats Left</div><div class="v">{{ detailItem?.left === null ? '-' : detailItem.left }}</div>
-          </div>
-        </ng-container>
-      </ng-container>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Date</th>
+            <th>Venue</th>
+            <th class="right">Price</th>
+            <th class="right">Seats</th>
+            <th>Status</th>
+            <th class="right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let e of events">
+            <td class="t-title">{{ e.title }}</td>
+            <td>{{ e.date ? (e.date | date:'mediumDate') : '-' }}</td>
+            <td>{{ e.venue || '-' }}</td>
+            <td class="right">Rs {{ e.price }}</td>
+            <td class="right">{{ e.bookedSeats }}/{{ e.totalSeats }} ({{ seatsLeft(e) }} left)</td>
+            <td>
+              <span class="status" [class.up]="statusOf(e)==='Upcoming'" [class.past]="statusOf(e)==='Past'" [class.so]="statusOf(e)==='Sold Out'">
+                {{ statusOf(e) }}
+              </span>
+            </td>
+            <td class="right">
+              <button class="btn small ghost" type="button" (click)="viewEvent(e.eventId)">View</button>
+              <button class="btn small edit" type="button" (click)="editEvent(e.eventId)">Edit</button>
+            </td>
+          </tr>
+          <tr *ngIf="events.length === 0">
+            <td class="empty" colspan="7">No events found.</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
-

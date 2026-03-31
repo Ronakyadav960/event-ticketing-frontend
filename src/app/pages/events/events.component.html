@@ -1,37 +1,11 @@
- <div class="page">
+﻿ <div class="page">
   
   <!-- Hero -->
   <section class="hero">
     <div class="hero-inner">
       <div class="hero-left">
         <h1>Book Your Next Event</h1>
-
-        <div class="filter-bar">
-          <select class="select select-small" [(ngModel)]="status">
-            <option value="all">All</option>
-            <option value="upcoming">Upcoming</option>
-            <option value="past">Past</option>
-            <option value="soldout">Sold Out</option>
-          </select>
-
-          <select class="select select-small" [(ngModel)]="sort">
-            <option value="dateAsc">Date ↑</option>
-            <option value="dateDesc">Date ↓</option>
-            <option value="priceAsc">Price ↑</option>
-            <option value="priceDesc">Price ↓</option>
-          </select>
-        </div>
-
-        <div class="searchbar">
-
-          <input
-            class="search"
-            placeholder="Search events by title or venue…"
-            [(ngModel)]="q"
-          />
-          <button class="btn ghost" (click)="q=''">Clear</button>
-         
-        </div>
+       <!--   <div class="hero-sub">Find events and book tickets instantly.</div>-->
         <div class="category-row">
           <button class="chip-btn" [class.active]="categoryFilter==='all'" (click)="selectCategory('all')">All</button>
           <button
@@ -47,12 +21,14 @@
     </div>
   </section>
 
+  <app-hero-carousel></app-hero-carousel>
+
 
 
 
   <!-- State -->
-  <div *ngIf="loading" class="state">Loading events…</div>
-  <div *ngIf="!loading && error" class="state error">❌ {{ error }}</div>
+  <div *ngIf="loading" class="state">Loading events...</div>
+  <div *ngIf="!loading && error" class="state error">Error: {{ error }}</div>
 
   <!-- Grid -->
   <section class="grid" *ngIf="!loading">
@@ -75,7 +51,7 @@
         <div class="title">{{ e.title }}</div>
 
         <div class="meta">
-          <span class="dot">•</span>
+          <span class="dot"></span>
           <span>{{ e.venue || '-' }}</span>
         </div>
 
@@ -86,7 +62,7 @@
         </div>
 
         <div class="bottom">
-          <div class="price">₹{{ e.price ?? 0 }}</div>
+          <div class="price">Rs.{{ e.price ?? 0 }}</div>
           <div class="seats">
             {{ remainingSeats(e) }} seats left
           </div>
@@ -103,11 +79,12 @@
     </div>
   </section>
 
-  <div *ngIf="loadingMore" class="state loading-more">Loading more eventsâ€¦</div>
+  <div *ngIf="loadingMore" class="state loading-more">Loading more events...</div>
   <div *ngIf="hasMore && !loading" #sentinel class="infinite-sentinel"></div>
   
 
 </div>     
+
 
 
 

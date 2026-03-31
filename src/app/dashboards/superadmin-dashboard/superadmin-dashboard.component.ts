@@ -4,6 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
 import { BookingService } from '../../services/booking.service';
+import { HeroService, HeroImageDto } from '../../services/hero.service';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
+
+type RangeDays = 7 | 30;
 
 @Component({
   standalone: true,
@@ -43,6 +48,13 @@ export class SuperadminDashboardComponent implements OnInit {
   selectedTop: 'creators' | 'users' | 'events' | 'bookings' | null = null;
   selectedSecondary: 'upcoming' | 'creatorsWithEvents' | 'past' | null = null;
 
+  rangeDays: RangeDays = 30;
+
+  // ===== Hero images admin =====
+  heroImages: HeroImageDto[] = [];
+  heroUploading = false;
+  heroError = '';
+
   pageSize = 5;
   eventPage = 1;
   userPage = 1;
@@ -55,6 +67,7 @@ export class SuperadminDashboardComponent implements OnInit {
   constructor(
     private dashboardService: DashboardService,
     private bookingService: BookingService,
+    private heroService: HeroService,
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {}
@@ -62,7 +75,70 @@ export class SuperadminDashboardComponent implements OnInit {
   ngOnInit() {
     this.loadDashboard();
     this.graphMonth = this.getCurrentMonth();
+    this.ensureUsersLoadedAll();
     this.ensureEventsLoadedAll();
+    this.ensureBookingsLoadedAll();
+    this.loadHeroImages();
+  }
+
+  setRange(days: RangeDays): void {
+    this.rangeDays = days;
+  }
+
+  heroUrl(img: HeroImageDto): string {
+    const base = environment.apiUrl.replace(/\/+$/, '');
+    const url = String(img?.url || '');
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url)) return url;
+    return url.startsWith('/') ? `${base}${url}` : `${base}/${url}`;
+  }
+
+  loadHeroImages(): void {
+    this.heroError = '';
+    this.heroService.getAdminHeroImages().subscribe({
+      next: (imgs) => {
+        this.heroImages = Array.isArray(imgs) ? imgs.slice(0, 6) : [];
+      },
+      error: (err) => {
+        this.heroError = err?.error?.message || 'Failed to load hero images.';
+        this.heroImages = [];
+      },
+    });
+  }
+
+  async onHeroFilesSelected(ev: Event): Promise<void> {
+    const input = ev.target as HTMLInputElement | null;
+    const files = input?.files ? Array.from(input.files) : [];
+    if (!files.length) return;
+
+    this.heroUploading = true;
+    this.heroError = '';
+
+    try {
+      // Upload sequentially (max 6 allowed by backend)
+      for (const file of files) {
+        await firstValueFrom(this.heroService.uploadHeroImage(file));
+      }
+      this.loadHeroImages();
+    } catch (err: any) {
+      this.heroError = err?.error?.message || 'Upload failed.';
+    } finally {
+      this.heroUploading = false;
+      if (input) input.value = '';
+    }
+  }
+
+  deleteHero(img: HeroImageDto): void {
+    const id = String(img?._id || '');
+    if (!id) return;
+    if (!confirm('Delete this hero image?')) return;
+
+    this.heroService.deleteHeroImage(id).subscribe({
+      next: () => this.loadHeroImages(),
+      error: (err) => {
+        this.heroError = err?.error?.message || 'Delete failed.';
+      },
+    });
   }
 
   loadDashboard() {
@@ -173,6 +249,170 @@ export class SuperadminDashboardComponent implements OnInit {
     if (typeof v === 'number') return v;
     if (this.bookingsTotal) return this.bookingsTotal;
     return this.bookingsAll.length || this.bookings.length;
+  }
+
+  // ===== Must-have KPIs =====
+  get totalTicketsSold(): number {
+    const list = this.bookingsAll.length ? this.bookingsAll : this.bookings;
+    return list.reduce((sum, b) => sum + this.bookingSeats(b), 0);
+  }
+
+  get totalRevenue(): number {
+    const list = this.bookingsAll.length ? this.bookingsAll : this.bookings;
+    return Math.round(list.reduce((sum, b) => sum + this.bookingRevenue(b), 0));
+  }
+
+  get soldOutEventsCount(): number {
+    const events = this.eventsAll.length ? this.eventsAll : this.events;
+    return events.filter((e) => this.remainingSeatsOfEvent(e) <= 0).length;
+  }
+
+  // ===== Revenue trend (last 7/30 days) =====
+  get revenueSeries(): Array<{ label: string; revenue: number }> {
+    const end = this.startOfDay(new Date());
+    const start = new Date(end);
+    start.setDate(start.getDate() - (this.rangeDays - 1));
+
+    const buckets = new Map<string, number>();
+    const list = this.bookingsAll.length ? this.bookingsAll : this.bookings;
+
+    list.forEach((b) => {
+      const createdAt = new Date(b?.createdAt || b?.date || 0);
+      if (isNaN(createdAt.getTime())) return;
+      const day = this.startOfDay(createdAt);
+      if (day < start || day > end) return;
+      const key = day.toISOString().slice(0, 10);
+      buckets.set(key, (buckets.get(key) || 0) + this.bookingRevenue(b));
+    });
+
+    const out: Array<{ label: string; revenue: number }> = [];
+    for (let i = 0; i < this.rangeDays; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      out.push({ label: this.formatShortDate(d), revenue: Math.round(buckets.get(key) || 0) });
+    }
+
+    return out;
+  }
+
+  get revenueLinePoints(): string {
+    return this.buildLinePoints(this.revenueSeries.map((p) => p.revenue));
+  }
+
+  // ===== Category-wise (events + revenue) =====
+  get categoryBreakdown(): Array<{ category: string; events: number; revenue: number }> {
+    const events = this.eventsAll.length ? this.eventsAll : this.events;
+
+    const eventsCount = new Map<string, number>();
+    events.forEach((e) => {
+      const c = String(e?.category || 'Other').trim() || 'Other';
+      eventsCount.set(c, (eventsCount.get(c) || 0) + 1);
+    });
+
+    const revenueByCat = new Map<string, number>();
+    const bookings = this.bookingsAll.length ? this.bookingsAll : this.bookings;
+    bookings.forEach((b) => {
+      const c = this.bookingCategory(b);
+      revenueByCat.set(c, (revenueByCat.get(c) || 0) + this.bookingRevenue(b));
+    });
+
+    const cats = new Set<string>([...eventsCount.keys(), ...revenueByCat.keys()]);
+    return Array.from(cats)
+      .map((c) => ({
+        category: c,
+        events: eventsCount.get(c) || 0,
+        revenue: Math.round(revenueByCat.get(c) || 0),
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 8);
+  }
+
+  // ===== Top events overall =====
+  get topEventsOverall(): Array<{ title: string; tickets: number; revenue: number }> {
+    const events = this.eventsAll.length ? this.eventsAll : this.events;
+    const titleById = new Map<string, string>();
+    events.forEach((e) => titleById.set(String(e?._id || e?.id || ''), e?.title || 'Event'));
+
+    const tickets = new Map<string, number>();
+    const revenue = new Map<string, number>();
+
+    const bookings = this.bookingsAll.length ? this.bookingsAll : this.bookings;
+    bookings.forEach((b) => {
+      const eventId = this.bookingEventId(b);
+      if (!eventId) return;
+      tickets.set(eventId, (tickets.get(eventId) || 0) + this.bookingSeats(b));
+      revenue.set(eventId, (revenue.get(eventId) || 0) + this.bookingRevenue(b));
+    });
+
+    const ids = new Set<string>([...tickets.keys(), ...revenue.keys()]);
+    return Array.from(ids)
+      .map((id) => ({
+        title: titleById.get(id) || 'Event',
+        tickets: tickets.get(id) || 0,
+        revenue: Math.round(revenue.get(id) || 0),
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+  }
+
+  // ===== Tables =====
+  get recentBookingsAdmin(): any[] {
+    const bookings = this.bookingsAll.length ? this.bookingsAll : this.bookings;
+    const copy = [...bookings];
+    copy.sort((a, b) => new Date(b?.createdAt || 0).getTime() - new Date(a?.createdAt || 0).getTime());
+    return copy.slice(0, 8);
+  }
+
+  get recentCreatedEventsAdmin(): any[] {
+    const events = this.eventsAll.length ? this.eventsAll : this.events;
+    const copy = [...events];
+    copy.sort((a, b) => {
+      const da = new Date(a?.createdAt || a?.date || 0).getTime();
+      const db = new Date(b?.createdAt || b?.date || 0).getTime();
+      return db - da;
+    });
+    return copy.slice(0, 8);
+  }
+
+  get topCreatorsAdmin(): Array<{ name: string; events: number; tickets: number; revenue: number }> {
+    const users = this.usersAll.length ? this.usersAll : [...this.creators, ...this.users];
+    const creators = users.filter((u) => String(u?.role || '') === 'creator');
+    const nameById = new Map<string, string>();
+    creators.forEach((c) => nameById.set(String(c?._id || c?.id || ''), c?.name || 'Creator'));
+
+    const events = this.eventsAll.length ? this.eventsAll : this.events;
+    const eventsByCreator = new Map<string, number>();
+    const eventCreator = new Map<string, string>();
+    events.forEach((e) => {
+      const id = String(e?._id || e?.id || '');
+      const creatorId = String(e?.createdBy || '');
+      if (!id || !creatorId) return;
+      eventCreator.set(id, creatorId);
+      eventsByCreator.set(creatorId, (eventsByCreator.get(creatorId) || 0) + 1);
+    });
+
+    const ticketsByCreator = new Map<string, number>();
+    const revenueByCreator = new Map<string, number>();
+    const bookings = this.bookingsAll.length ? this.bookingsAll : this.bookings;
+    bookings.forEach((b) => {
+      const eventId = this.bookingEventId(b);
+      const creatorId = eventCreator.get(eventId) || String(b?.event?.createdBy || b?.createdBy || '');
+      if (!creatorId) return;
+      ticketsByCreator.set(creatorId, (ticketsByCreator.get(creatorId) || 0) + this.bookingSeats(b));
+      revenueByCreator.set(creatorId, (revenueByCreator.get(creatorId) || 0) + this.bookingRevenue(b));
+    });
+
+    const ids = new Set<string>([...eventsByCreator.keys(), ...ticketsByCreator.keys(), ...revenueByCreator.keys()]);
+    return Array.from(ids)
+      .map((id) => ({
+        name: nameById.get(id) || 'Creator',
+        events: eventsByCreator.get(id) || 0,
+        tickets: ticketsByCreator.get(id) || 0,
+        revenue: Math.round(revenueByCreator.get(id) || 0),
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
   }
 
   get creatorUsers(): any[] {
@@ -631,6 +871,70 @@ export class SuperadminDashboardComponent implements OnInit {
     return `${d.getFullYear()}-${m}`;
   }
 
+  // ===== Must-have helpers =====
+  private bookingSeats(b: any): number {
+    const seats = Number(b?.seats ?? b?.seatCount ?? b?.tickets ?? 1);
+    return isNaN(seats) ? 0 : Math.max(0, seats);
+  }
+
+  private bookingEventId(b: any): string {
+    return String(b?.event?._id || b?.event?.id || b?.eventId || b?.event || '');
+  }
+
+  private bookingPrice(b: any): number {
+    const direct = Number(b?.event?.price ?? b?.price ?? 0);
+    if (!isNaN(direct) && direct > 0) return direct;
+
+    const eventId = this.bookingEventId(b);
+    if (!eventId) return 0;
+    const events = this.eventsAll.length ? this.eventsAll : this.events;
+    const ev = events.find((e) => String(e?._id || e?.id || '') === eventId);
+    const price = Number(ev?.price ?? 0);
+    return isNaN(price) ? 0 : Math.max(0, price);
+  }
+
+  private bookingRevenue(b: any): number {
+    const seats = this.bookingSeats(b);
+    const price = this.bookingPrice(b);
+    return seats * price;
+  }
+
+  private bookingCategory(b: any): string {
+    const direct = String(b?.event?.category || b?.category || '').trim();
+    if (direct) return direct;
+    const eventId = this.bookingEventId(b);
+    if (!eventId) return 'Other';
+    const events = this.eventsAll.length ? this.eventsAll : this.events;
+    const ev = events.find((e) => String(e?._id || e?.id || '') === eventId);
+    const c = String(ev?.category || 'Other').trim();
+    return c || 'Other';
+  }
+
+  private remainingSeatsOfEvent(e: any): number {
+    const total = Number(e?.totalSeats ?? e?.seats ?? 0);
+    const booked = Number(e?.bookedSeats ?? 0);
+    const left = total - booked;
+    return isNaN(left) ? 0 : Math.max(0, left);
+  }
+
+  private buildLinePoints(values: number[]): string {
+    const w = 300;
+    const h = 100;
+    const padX = 8;
+    const padY = 10;
+    const innerW = w - padX * 2;
+    const innerH = h - padY * 2;
+    const max = Math.max(...values.map((v) => Number(v || 0)), 1);
+
+    const pts = values.map((v, i) => {
+      const x = padX + (values.length <= 1 ? 0 : (i / (values.length - 1)) * innerW);
+      const y = padY + (1 - (Number(v || 0) / max)) * innerH;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+
+    return pts.join(' ');
+  }
+
   private normalizeBars(values: number[]): number[] {
     const max = Math.max(...values, 1);
     return values.map(v => Math.round((v / max) * 100));
@@ -681,7 +985,7 @@ export class SuperadminDashboardComponent implements OnInit {
 
   private getEventTitle(id: string): string {
     const ev = this.eventsAll.find(e => String(e?._id || e?.id || '') === id);
-    return ev?.title || 'Event';
+    return ev?.title || 'Event'; 
   }
 
 

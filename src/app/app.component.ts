@@ -7,17 +7,21 @@ import {
   RouterLinkActive,
   NavigationEnd
 } from '@angular/router';
-import { filter, Subject, takeUntil } from 'rxjs';
+import { filter, Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 import { AuthService } from './auth/auth.service';
+import { FooterComponent } from './shared/footer/footer.component';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     RouterOutlet,
     RouterLink,
-    RouterLinkActive
+    RouterLinkActive,
+    FooterComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
@@ -31,7 +35,11 @@ export class AppComponent implements OnDestroy {
 
   isLoginPage = false;
   isRegisterPage = false;
+  isEventsPage = false;
   isDrawerOpen = false;
+  navbarQuery = '';
+
+  private search$ = new Subject<string>();
 
   constructor() {
     this.router.events
@@ -41,10 +49,28 @@ export class AppComponent implements OnDestroy {
       )
       .subscribe((event: NavigationEnd) => {
         const url = event.urlAfterRedirects;
+        const urlTree = this.router.parseUrl(url);
 
         this.isLoginPage = url.includes('/login');
         this.isRegisterPage = url.includes('/register');
+        this.isEventsPage = urlTree.root.children['primary']?.segments?.[0]?.path === 'events';
+
+        if (this.isEventsPage) {
+          const q = urlTree.queryParams?.['q'];
+          this.navbarQuery = typeof q === 'string' ? q : '';
+        } else {
+          this.navbarQuery = '';
+        }
         this.isDrawerOpen = false;
+      });
+
+    this.search$
+      .pipe(debounceTime(250), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe((q) => {
+        this.router.navigate(['/events'], {
+          queryParams: { q: q ? q : null },
+          queryParamsHandling: 'merge',
+        });
       });
   }
 
@@ -98,6 +124,15 @@ export class AppComponent implements OnDestroy {
 
   closeDrawer(): void {
     this.isDrawerOpen = false;
+  }
+
+  onNavbarQueryChange(value: string): void {
+    this.search$.next(value ?? '');
+  }
+
+  clearNavbarSearch(): void {
+    this.navbarQuery = '';
+    this.search$.next('');
   }
 
   ngOnDestroy(): void {

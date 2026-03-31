@@ -1,25 +1,45 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { CommonModule, DatePipe } from '@angular/common';
+import { Router, RouterModule } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
+
+type RangeDays = 7 | 30;
+
+type CreatorEventRow = {
+  eventId: string;
+  title: string;
+  date?: string;
+  venue?: string;
+  price: number;
+  totalSeats: number;
+  bookedSeats: number;
+  category?: string;
+};
+
+type DailyPoint = {
+  date: Date;
+  label: string;
+  bookings: number;
+  revenue: number;
+};
 
 @Component({
   standalone: true,
   selector: 'app-creator-dashboard',
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule, DatePipe],
   templateUrl: './creator-dashboard.component.html',
   styleUrls: ['./creator-dashboard.component.css']
 })
 export class CreatorDashboardComponent implements OnInit {
 
-  data: any;
+  raw: any = null;
+  events: CreatorEventRow[] = [];
+  bookings: any[] = [];
+
   loading = false;
   errorMsg = '';
-  selectedBox: 'events' | 'bookers' | 'seats' | 'revenue' | 'top' | null = null;
 
-  detailModalOpen = false;
-  detailKind: 'events' | 'bookers' | 'seats' | 'revenue' | 'top' | null = null;
-  detailItem: any = null;
+  rangeDays: RangeDays = 30;
 
   constructor(private dashboardService: DashboardService, private router: Router) {}
 
@@ -27,7 +47,9 @@ export class CreatorDashboardComponent implements OnInit {
     this.loading = true;
     this.dashboardService.getCreatorDashboard().subscribe({
       next: (res) => {
-        this.data = res;
+        this.raw = res;
+        this.events = this.normalizeEvents(res);
+        this.bookings = this.normalizeBookings(res);
         this.loading = false;
       },
       error: (err) => {
@@ -38,114 +60,183 @@ export class CreatorDashboardComponent implements OnInit {
     });
   }
 
-  selectBox(key: 'events' | 'bookers' | 'seats' | 'revenue' | 'top') {
-    this.selectedBox = this.selectedBox === key ? null : key;
+  setRange(days: RangeDays): void {
+    this.rangeDays = days;
   }
 
-  openDetails(kind: 'events' | 'bookers' | 'seats' | 'revenue' | 'top', item: any) {
-    this.detailKind = kind;
-    this.detailItem = item;
-    this.detailModalOpen = true;
+  // ===== KPIs =====
+  get myEventsCount(): number {
+    return this.events.length;
   }
 
-  closeDetails() {
-    this.detailModalOpen = false;
-    this.detailKind = null;
-    this.detailItem = null;
+  get upcomingEventsCount(): number {
+    const now = Date.now();
+    return this.events.filter((e) => {
+      const d = new Date(e.date || 0).getTime();
+      return !isNaN(d) && d >= now;
+    }).length;
   }
 
-  viewEventFromModal() {
-    const id = String(this.detailItem?.eventId || this.detailItem?._id || this.detailItem?.id || '');
-    if (!id) return;
-    this.closeDetails();
-    this.router.navigate(['/events', id]);
-  }
-
-  editEventFromModal() {
-    const id = String(this.detailItem?.eventId || this.detailItem?._id || this.detailItem?.id || '');
-    if (!id) return;
-    this.closeDetails();
-    this.router.navigate(['/create-event'], { queryParams: { id } });
-  }
-
-  get perEvent(): any[] {
-    const list = this.data?.perEvent;
-    return Array.isArray(list) ? list : [];
-  }
-
-  get eventsCount(): number {
-    const v = this.data?.totals?.events;
-    return typeof v === 'number' ? v : this.perEvent.length;
-  }
-
-  get totalBookings(): number {
-    const v = this.data?.totals?.bookings;
-    if (typeof v === 'number') return v;
-    return this.perEvent.reduce((sum, e) => sum + Number(e?.bookings || 0), 0);
+  get ticketsSold(): number {
+    return this.events.reduce((sum, e) => sum + Number(e.bookedSeats || 0), 0);
   }
 
   get totalRevenue(): number {
-    const v = this.data?.totals?.revenue;
-    if (typeof v === 'number') return v;
-    return this.perEvent.reduce((sum, e) => sum + Number(e?.revenue || 0), 0);
+    return this.events.reduce((sum, e) => sum + (Number(e.bookedSeats || 0) * Number(e.price || 0)), 0);
   }
 
-  get topEvent(): any {
-    return this.data?.topEvent || null;
+  get soldOutCount(): number {
+    return this.events.filter((e) => this.seatsLeft(e) === 0).length;
   }
 
-  get uniqueBookers(): any[] {
-    const list = this.data?.bookings || this.data?.recentBookings || [];
-    if (!Array.isArray(list)) return [];
-    const map = new Map<string, any>();
-    list.forEach((b: any) => {
-      const u = b?.user || b?.userId || {};
-      const key = String(u?._id || u?.id || u?.email || b?.email || b?.name || '');
-      if (!key) return;
-      if (!map.has(key)) {
-        map.set(key, {
-          name: u?.name || b?.name || 'User',
-          email: u?.email || b?.email || '-',
-          eventTitle: b?.event?.title || b?.eventTitle || ''
-        });
-      }
+  // ===== Charts =====
+  get dailySeries(): DailyPoint[] {
+    const end = this.startOfDay(new Date());
+    const start = new Date(end);
+    start.setDate(start.getDate() - (this.rangeDays - 1));
+
+    const buckets = new Map<string, { bookings: number; revenue: number }>();
+    const priceByEventId = new Map<string, number>();
+    this.events.forEach((e) => priceByEventId.set(e.eventId, Number(e.price || 0)));
+
+    this.bookings.forEach((b: any) => {
+      const createdAt = new Date(b?.createdAt || b?.date || 0);
+      if (isNaN(createdAt.getTime())) return;
+      const day = this.startOfDay(createdAt);
+      if (day < start || day > end) return;
+
+      const seats = Number(b?.seats ?? b?.seatCount ?? 1);
+      const eventId = String(b?.event?._id || b?.event?.id || b?.eventId || b?.event || '');
+      const price =
+        Number(b?.event?.price ?? b?.price ?? priceByEventId.get(eventId) ?? 0) || 0;
+
+      const key = day.toISOString().slice(0, 10);
+      const curr = buckets.get(key) || { bookings: 0, revenue: 0 };
+      curr.bookings += isNaN(seats) ? 0 : Math.max(0, seats);
+      curr.revenue += (isNaN(seats) ? 0 : Math.max(0, seats)) * price;
+      buckets.set(key, curr);
     });
-    return Array.from(map.values());
+
+    const out: DailyPoint[] = [];
+    for (let i = 0; i < this.rangeDays; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      const v = buckets.get(key) || { bookings: 0, revenue: 0 };
+      out.push({
+        date: d,
+        label: this.formatShort(d),
+        bookings: v.bookings,
+        revenue: Math.round(v.revenue),
+      });
+    }
+    return out;
   }
 
-  get seatsLeftPerEvent(): any[] {
-    return this.perEvent.map((e) => {
-      const total =
-        Number(e?.totalSeats ?? e?.seats ?? e?.capacity ?? e?.total ?? 0);
-      const booked =
-        Number(e?.seatsBooked ?? e?.bookings ?? e?.seats ?? 0);
-      const left =
-        total > 0 ? Math.max(0, total - booked) : null;
-      return {
-        title: e?.title || 'Event',
-        left
-      };
+  get bookingsLinePoints(): string {
+    return this.buildLinePoints(this.dailySeries.map((p) => p.bookings));
+  }
+
+  get revenueLinePoints(): string {
+    return this.buildLinePoints(this.dailySeries.map((p) => p.revenue));
+  }
+
+  // ===== Top 5 =====
+  get top5ByTickets(): Array<{ title: string; value: number }> {
+    return [...this.events]
+      .sort((a, b) => Number(b.bookedSeats || 0) - Number(a.bookedSeats || 0))
+      .slice(0, 5)
+      .map((e) => ({ title: e.title, value: Number(e.bookedSeats || 0) }));
+  }
+
+  get top5ByRevenue(): Array<{ title: string; value: number }> {
+    return [...this.events]
+      .sort((a, b) => (Number(b.bookedSeats || 0) * Number(b.price || 0)) - (Number(a.bookedSeats || 0) * Number(a.price || 0)))
+      .slice(0, 5)
+      .map((e) => ({ title: e.title, value: Math.round(Number(e.bookedSeats || 0) * Number(e.price || 0)) }));
+  }
+
+  maxValue(list: Array<{ value: number }>): number {
+    return Math.max(...list.map((x) => Number(x.value || 0)), 1);
+  }
+
+  // ===== Table actions =====
+  viewEvent(id: string): void {
+    if (!id) return;
+    this.router.navigate(['/events', id]);
+  }
+
+  editEvent(id: string): void {
+    if (!id) return;
+    this.router.navigate(['/create-event'], { queryParams: { id } });
+  }
+
+  seatsLeft(e: CreatorEventRow): number {
+    const total = Number(e.totalSeats || 0);
+    const booked = Number(e.bookedSeats || 0);
+    const left = total - booked;
+    return isNaN(left) ? 0 : Math.max(0, left);
+  }
+
+  statusOf(e: CreatorEventRow): 'Upcoming' | 'Past' | 'Sold Out' {
+    if (this.seatsLeft(e) <= 0) return 'Sold Out';
+    const d = new Date(e.date || 0).getTime();
+    if (!isNaN(d) && d < Date.now()) return 'Past';
+    return 'Upcoming';
+  }
+
+  private normalizeEvents(res: any): CreatorEventRow[] {
+    const list = Array.isArray(res?.perEvent) ? res.perEvent : Array.isArray(res?.events) ? res.events : [];
+    return list
+      .map((e: any) => {
+        const eventId = String(e?.eventId || e?._id || e?.id || '');
+        const totalSeats = Number(e?.totalSeats ?? e?.seats ?? e?.capacity ?? 0);
+        const bookedSeats = Number(e?.bookedSeats ?? e?.seatsBooked ?? e?.seatsSold ?? e?.bookings ?? 0);
+        const price = Number(e?.price ?? e?.event?.price ?? 0);
+        return {
+          eventId,
+          title: String(e?.title || e?.event?.title || 'Event'),
+          date: e?.date || e?.event?.date,
+          venue: e?.venue || e?.event?.venue,
+          price: isNaN(price) ? 0 : price,
+          totalSeats: isNaN(totalSeats) ? 0 : totalSeats,
+          bookedSeats: isNaN(bookedSeats) ? 0 : bookedSeats,
+          category: e?.category || e?.event?.category,
+        } as CreatorEventRow;
+      })
+      .filter((e: CreatorEventRow) => !!e.eventId);
+  }
+
+  private normalizeBookings(res: any): any[] {
+    const list = res?.bookings || res?.recentBookings || res?.data?.bookings || [];
+    return Array.isArray(list) ? list : [];
+  }
+
+  private startOfDay(d: Date): Date {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+  }
+
+  private formatShort(d: Date): string {
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  }
+
+  private buildLinePoints(values: number[]): string {
+    const w = 300;
+    const h = 100;
+    const padX = 8;
+    const padY = 10;
+    const innerW = w - padX * 2;
+    const innerH = h - padY * 2;
+    const max = Math.max(...values.map((v) => Number(v || 0)), 1);
+
+    const pts = values.map((v, i) => {
+      const x = padX + (values.length <= 1 ? 0 : (i / (values.length - 1)) * innerW);
+      const y = padY + (1 - (Number(v || 0) / max)) * innerH;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
     });
-  }
 
-  get graphBars(): number[] {
-    const counts = this.perEvent.map((e) => Number(e?.bookings || 0));
-    return this.normalizeBars(counts);
-  }
-
-  get graphSeries(): { label: string; count: number; height: number }[] {
-    const counts = this.perEvent.map((e) => Number(e?.bookings || 0));
-    const heights = this.normalizeBars(counts);
-    return this.perEvent.map((e, i) => ({
-      label: `${i + 1}. ${e?.title || 'Event'}`,
-      count: Number(e?.bookings || 0),
-      height: heights[i] ?? 0
-    }));
-  }
-
-  private normalizeBars(values: number[]): number[] {
-    if (!values.length) return [0, 0, 0, 0];
-    const max = Math.max(...values, 1);
-    return values.map(v => Math.round((v / max) * 100));
+    return pts.join(' ');
   }
 }

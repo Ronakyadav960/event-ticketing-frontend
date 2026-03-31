@@ -171,7 +171,9 @@ import { AuthService } from '../auth.service';
       cursor: pointer;
     }
     .verify button.secondary {
-      background: #0f172a;
+      background: rgba(17, 24, 39, 0.03);
+      color: rgba(17, 24, 39, 0.82);
+      border: 1px solid rgba(17, 24, 39, 0.12);
     }
     .link {
       margin-top: 10px;

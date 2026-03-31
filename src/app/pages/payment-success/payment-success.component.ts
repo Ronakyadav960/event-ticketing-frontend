@@ -8,13 +8,8 @@ import { environment } from '../../../environments/environment';
   standalone: true,
   imports: [CommonModule, HttpClientModule],
   selector: 'app-payment-success',
-  template: `
-    <div style="padding:24px;text-align:center">
-      <h2>✅ Payment Successful</h2>
-      <p *ngIf="!error">Finalizing your booking…</p>
-      <p *ngIf="error" style="color:red">{{ error }}</p>
-    </div>
-  `
+  templateUrl: './payment-success.component.html',
+  styleUrls: ['./payment-success.component.css'],
 })
 export class PaymentSuccessComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);

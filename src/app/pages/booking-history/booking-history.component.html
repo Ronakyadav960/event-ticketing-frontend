@@ -20,7 +20,7 @@
       <div class="ticket-main">
         <div class="title">{{ b?.event?.title || 'Unknown Event' }}</div>
         <div class="meta">
-          <span>Date: {{ (b?.event?.date || b?.createdAt) | date:'medium' }}</span>
+          <span>Date: {{ (b?.showAt || b?.event?.date || b?.createdAt) | date:'medium' }}</span>
           <span>Venue: {{ b?.event?.venue || '-' }}</span>
           <span>Seats: {{ b?.seats ?? '-' }}</span>
         </div>

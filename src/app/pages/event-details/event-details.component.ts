@@ -1,4 +1,4 @@
-// src/app/pages/event-details/event-details.component.ts ✅ UPDATED (Stripe redirect + safer booking)
+﻿// src/app/pages/event-details/event-details.component.ts âœ… UPDATED (Stripe redirect + safer booking)
 
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -48,7 +48,7 @@ import { BookingService } from '../../services/booking.service';
                     <div class="ticket-card">
                       <div class="kicker">Now Showing</div>
                       <h2 class="title">{{ event.title }}</h2>
-                      <div class="meta-line">{{ event.date | date: 'fullDate' }} � {{ event.date | date: 'shortTime' }}</div>
+                      <div class="meta-line">{{ event.date | date: 'fullDate' }} · {{ event.date | date: 'shortTime' }}</div>
                       <div class="meta-line">{{ event.venue || '-' }}</div>
                       <div class="price-row">From Rs {{ event.price ?? 0 }}</div>
                       <button class="btn primary" type="button" (click)="openBooking()">{{ designConfig?.badgeText || 'Book Now' }}</button>
@@ -63,7 +63,7 @@ import { BookingService } from '../../services/booking.service';
                     <div class="concert-content">
                       <div class="kicker glow">{{ designConfig?.heroKicker || 'Live Concert' }}</div>
                       <h2 class="title">{{ event.title }}</h2>
-                      <div class="meta-line">{{ event.date | date: 'fullDate' }} � {{ event.date | date: 'shortTime' }}</div>
+                      <div class="meta-line">{{ event.date | date: 'fullDate' }} · {{ event.date | date: 'shortTime' }}</div>
                       <div class="meta-line">{{ event.venue || '-' }}</div>
                       <div class="price-row">Rs {{ event.price ?? 0 }}</div>
                       <button class="btn primary" type="button" (click)="openBooking()">{{ designConfig?.ctaText || 'Get Tickets' }}</button>
@@ -83,7 +83,7 @@ import { BookingService } from '../../services/booking.service';
                     <div class="comedy-left">
                       <div class="kicker">Comedy Night</div>
                       <h2 class="title">{{ event.title }}</h2>
-                      <div class="meta-line">{{ event.date | date: 'fullDate' }} � {{ event.date | date: 'shortTime' }}</div>
+                      <div class="meta-line">{{ event.date | date: 'fullDate' }} · {{ event.date | date: 'shortTime' }}</div>
                       <div class="meta-line">{{ event.venue || '-' }}</div>
                       <div class="price-row">Rs {{ event.price ?? 0 }}</div>
                       <div class="desc" [innerHTML]="event.description || 'No description yet.'"></div>
@@ -240,6 +240,24 @@ import { BookingService } from '../../services/booking.service';
                     />
                     <span>Yes</span>
                   </label>
+                </div>
+
+                <div class="form-group">
+                  <label>Show Date</label>
+                  <select class="form-control" name="showDate" [(ngModel)]="selectedShowDate" required>
+                    <option value="">Select date</option>
+                    <option *ngFor="let d of showDateOptions" [value]="d">
+                      {{ d | date: 'fullDate' }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Show Time</label>
+                  <select class="form-control" name="showTime" [(ngModel)]="selectedShowTime" required>
+                    <option value="">Select time</option>
+                    <option *ngFor="let t of showTimeOptions" [value]="t">{{ t }}</option>
+                  </select>
                 </div>
 
                 <div class="form-group">
@@ -732,6 +750,9 @@ export class EventDetailsComponent implements OnInit {
   designation = '';
   customFieldValues: Record<string, any> = {};
 
+  selectedShowDate = '';
+  selectedShowTime = '';
+
   submitting = false;
   msg = '';
   showBookingForm = false;
@@ -832,10 +853,81 @@ export class EventDetailsComponent implements OnInit {
   openBooking() {
     this.showBookingForm = true;
     this.msg = '';
+    this.ensureDefaultShowSelection();
   }
 
   closeBooking() {
     this.showBookingForm = false;
+  }
+
+  get showDateOptions(): string[] {
+    const ev = this.event;
+    if (!ev) return [];
+
+    const startYmd = String(ev.startDate || ev.date || '').slice(0, 10);
+    const endYmd = String(ev.endDate || ev.startDate || ev.date || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startYmd) || !/^\d{4}-\d{2}-\d{2}$/.test(endYmd)) {
+      return [];
+    }
+
+    const start = new Date(`${startYmd}T00:00:00.000Z`);
+    const end = new Date(`${endYmd}T00:00:00.000Z`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+
+    const maxDays = 120;
+    const out: string[] = [];
+    const cur = new Date(start);
+    let count = 0;
+
+    while (cur.getTime() <= end.getTime() && count < maxDays) {
+      const y = cur.getUTCFullYear();
+      const m = String(cur.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(cur.getUTCDate()).padStart(2, '0');
+      out.push(`${y}-${m}-${d}`);
+      cur.setUTCDate(cur.getUTCDate() + 1);
+      count += 1;
+    }
+
+    return out;
+  }
+
+  get showTimeOptions(): string[] {
+    const ev = this.event;
+    if (!ev) return [];
+
+    const list = Array.isArray(ev.showTimes) ? ev.showTimes : [];
+    const normalized = list.map((t: any) => String(t || '').trim()).filter(Boolean);
+    if (normalized.length) return normalized;
+
+    const legacyIso = ev.date;
+    const d = legacyIso ? new Date(legacyIso) : null;
+    if (!d || Number.isNaN(d.getTime())) return [];
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return [`${hh}:${mm}`];
+  }
+
+  private ensureDefaultShowSelection() {
+    const dates = this.showDateOptions;
+    const times = this.showTimeOptions;
+
+    if (!this.selectedShowDate && dates.length) this.selectedShowDate = dates[0];
+    if (!this.selectedShowTime && times.length) this.selectedShowTime = times[0];
+
+    if (this.selectedShowDate && dates.length && !dates.includes(this.selectedShowDate)) {
+      this.selectedShowDate = dates[0];
+    }
+    if (this.selectedShowTime && times.length && !times.includes(this.selectedShowTime)) {
+      this.selectedShowTime = times[0];
+    }
+  }
+
+  private buildShowAtIso(): string | null {
+    this.ensureDefaultShowSelection();
+    if (!this.selectedShowDate || !this.selectedShowTime) return null;
+    const d = new Date(`${this.selectedShowDate}T${this.selectedShowTime}:00`);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toISOString();
   }
 
   onEventImgError() {
@@ -867,6 +959,7 @@ export class EventDetailsComponent implements OnInit {
       next: (res: any) => {
         const ev = res?.event ?? res?.data ?? res;
         this.event = ev;
+        this.ensureDefaultShowSelection();
 
         this.eventImgFailed = false;
 
@@ -903,7 +996,7 @@ export class EventDetailsComponent implements OnInit {
 
   book(): void {
     if (!this.event) return;
-    if (this.submitting) return; // ✅ prevent double clicks
+    if (this.submitting) return; // âœ… prevent double clicks
 
     const eventId = this.event._id || this.event.id;
     if (!eventId) {
@@ -913,30 +1006,36 @@ export class EventDetailsComponent implements OnInit {
 
     const qty = Number(this.seats);
     if (!Number.isInteger(qty) || qty < 1) {
-      this.msg = '❌ Seats must be at least 1.';
+      this.msg = 'âŒ Seats must be at least 1.';
       return;
     }
 
     if (!this.name.trim() || !this.email.trim()) {
-      this.msg = '❌ Name and Email are required.';
+      this.msg = 'âŒ Name and Email are required.';
       return;
     }
 
     if (this.isStandard && !this.phone.trim()) {
-      this.msg = '❌ Phone is required for standard registration.';
+      this.msg = 'âŒ Phone is required for standard registration.';
       return;
     }
     if (this.isWorkshop && (!this.experience.trim() || !this.skillLevel)) {
-      this.msg = '❌ Experience and skill level are required for workshop registration.';
+      this.msg = 'âŒ Experience and skill level are required for workshop registration.';
       return;
     }
     if (this.isSeminar && (!this.company.trim() || !this.designation.trim())) {
-      this.msg = '❌ Company and designation are required for seminar registration.';
+      this.msg = 'âŒ Company and designation are required for seminar registration.';
       return;
     }
 
     if (!this.validateCustomFields()) {
-      this.msg = '❌ Please complete all required custom fields.';
+      this.msg = 'âŒ Please complete all required custom fields.';
+      return;
+    }
+
+    const showAtIso = this.buildShowAtIso();
+    if (!showAtIso) {
+      this.msg = 'âŒ Please select show date and time.';
       return;
     }
 
@@ -958,6 +1057,7 @@ export class EventDetailsComponent implements OnInit {
           name: this.name,
           email: this.email,
           seats: qty,
+          showAt: showAtIso,
           registrationTemplate: this.registrationTemplate,
           registrationData: {
             phone: this.phone,
@@ -997,6 +1097,7 @@ export class EventDetailsComponent implements OnInit {
         currency: 'inr',
         name: this.name,
         email: this.email,
+        showAt: showAtIso,
         registrationTemplate: this.registrationTemplate,
         registrationData: {
           phone: this.phone,
@@ -1044,6 +1145,7 @@ export class EventDetailsComponent implements OnInit {
     return true;
   }
 }
+
 
 
 

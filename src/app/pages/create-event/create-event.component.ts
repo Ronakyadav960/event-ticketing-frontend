@@ -28,7 +28,13 @@ export class CreateEventComponent implements OnInit {
 
   title = '';
   description = '';
+  // Legacy single datetime (kept for backward compatibility; computed from schedule on submit)
   date = '';
+
+  // New: schedule (BookMyShow-style)
+  startDate = '';
+  endDate = '';
+  showTimes: string[] = ['19:00'];
   venue = '';
   price = 0;
   totalSeats = 1;
@@ -125,22 +131,49 @@ export class CreateEventComponent implements OnInit {
   }
 
   // =============================
-  // MIN DATE
+  // MIN DATE (Schedule)
   // =============================
-  get minDateTimeLocal(): string {
+  get minDateLocal(): string {
     const d = new Date();
-    d.setSeconds(0, 0);
     const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
   // =============================
-  // DATE PREVIEW
+  // SCHEDULE PREVIEW
   // =============================
+  get schedulePreview(): { rangeText: string; timesText: string } | null {
+    if (!this.startDate || !this.endDate || !this.showTimes?.length) return null;
+
+    const s = new Date(`${this.startDate}T00:00:00`);
+    const e = new Date(`${this.endDate}T00:00:00`);
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null;
+
+    const fmt = new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+
+    const rangeText =
+      this.startDate === this.endDate
+        ? fmt.format(s)
+        : `${fmt.format(s)} - ${fmt.format(e)}`;
+
+    const timesText = this.showTimes
+      .map((t) => String(t || '').trim())
+      .filter(Boolean)
+      .join(', ');
+
+    return timesText ? { rangeText, timesText } : null;
+  }
+
+  // Legacy preview helper used by existing preview UI (derived from schedule)
   get datePreview(): { dateText: string; timeText: string } | null {
-    if (!this.date) return null;
-    const d = new Date(this.date);
-    if (isNaN(d.getTime())) return null;
+    const iso = this.buildLegacyDateIso() || (this.date ? new Date(this.date).toISOString() : '');
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
 
     const dateText = new Intl.DateTimeFormat('en-GB', {
       day: '2-digit',
@@ -155,6 +188,25 @@ export class CreateEventComponent implements OnInit {
     }).format(d);
 
     return { dateText, timeText };
+  }
+
+  private buildLegacyDateIso(): string {
+    const firstTime = String(this.showTimes?.[0] || '').trim();
+    if (!this.startDate || !firstTime) return '';
+    // Local date + time -> ISO (keeps correct moment for current user timezone)
+    const d = new Date(`${this.startDate}T${firstTime}:00`);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toISOString();
+  }
+
+  addShowTime() {
+    this.showTimes = [...(this.showTimes || []), '19:00'];
+  }
+
+  removeShowTime(index: number) {
+    const next = [...(this.showTimes || [])];
+    next.splice(index, 1);
+    this.showTimes = next.length ? next : ['19:00'];
   }
 
   // =============================
@@ -225,7 +277,9 @@ export class CreateEventComponent implements OnInit {
     return !!(
       this.title.trim() &&
       this.resolvedCategory &&
-      this.date &&
+      this.startDate &&
+      this.endDate &&
+      this.showTimes?.length &&
       this.locationType &&
       this.venue.trim() &&
       this.totalSeats >= 1 &&
@@ -259,7 +313,25 @@ export class CreateEventComponent implements OnInit {
       next: (ev: any) => {
         this.title = ev.title || '';
         this.description = ev.description || '';
-        this.date = ev.date ? ev.date.slice(0, 16) : '';
+        // Schedule (new) with fallbacks to legacy `date`
+        const legacyIso = ev.date || '';
+        const legacyDate = legacyIso ? new Date(legacyIso) : null;
+
+        this.startDate = ev.startDate ? String(ev.startDate).slice(0, 10) : (legacyIso ? legacyIso.slice(0, 10) : '');
+        this.endDate = ev.endDate ? String(ev.endDate).slice(0, 10) : this.startDate;
+
+        if (Array.isArray(ev.showTimes) && ev.showTimes.length) {
+          this.showTimes = ev.showTimes.map((t: any) => String(t || '').trim()).filter(Boolean);
+        } else if (legacyDate && !Number.isNaN(legacyDate.getTime())) {
+          const hh = String(legacyDate.getHours()).padStart(2, '0');
+          const mm = String(legacyDate.getMinutes()).padStart(2, '0');
+          this.showTimes = [`${hh}:${mm}`];
+        } else {
+          this.showTimes = ['19:00'];
+        }
+
+        // Keep legacy date field (not shown in UI)
+        this.date = legacyIso ? legacyIso.slice(0, 16) : '';
         this.venue = ev.venue || '';
         this.price = ev.price || 0;
         this.totalSeats = ev.totalSeats || 1;
@@ -303,15 +375,41 @@ export class CreateEventComponent implements OnInit {
     if (!this.title.trim()) { this.errorMessage = 'Title required'; return; }
     if (!this.resolvedCategory) { this.errorMessage = 'Category required'; return; }
     if (!this.venue.trim()) { this.errorMessage = 'Venue required'; return; }
-    if (!this.date) { this.errorMessage = 'Date required'; return; }
+    if (!this.startDate) { this.errorMessage = 'Start date required'; return; }
+    if (!this.endDate) { this.errorMessage = 'End date required'; return; }
+    if (!this.showTimes?.length) { this.errorMessage = 'At least 1 show time required'; return; }
     if (!this.locationType) { this.errorMessage = 'Location type required'; return; }
     if (this.totalSeats < 1) { this.errorMessage = 'Seats must be >= 1'; return; }
     if (this.price < 0) { this.errorMessage = 'Price cannot be negative'; return; }
 
+    if (this.endDate < this.startDate) {
+      this.errorMessage = 'End date must be after start date';
+      return;
+    }
+
+    const times = this.showTimes
+      .map((t) => String(t || '').trim())
+      .filter(Boolean);
+
+    const invalidTime = times.find((t) => !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(t));
+    if (invalidTime) {
+      this.errorMessage = `Invalid time: ${invalidTime}`;
+      return;
+    }
+
+    const legacyIso = this.buildLegacyDateIso();
+    if (!legacyIso) {
+      this.errorMessage = 'Invalid start date / show time';
+      return;
+    }
+
     const fd = new FormData();
     fd.append('title', this.title.trim());
     fd.append('description', this.description.trim());
-    fd.append('date', new Date(this.date).toISOString());
+    fd.append('date', legacyIso);
+    fd.append('startDate', this.startDate);
+    fd.append('endDate', this.endDate);
+    fd.append('showTimes', JSON.stringify(times));
     fd.append('venue', this.venue.trim());
     fd.append('price', String(this.price));
     fd.append('totalSeats', String(this.totalSeats));

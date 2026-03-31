@@ -1,0 +1,8 @@
+<div class="status-wrap">
+  <div class="status-card">
+    <h2 class="title">Payment Successful</h2>
+    <p class="sub" *ngIf="!error">Finalizing your booking...</p>
+    <p class="error" *ngIf="error">{{ error }}</p>
+  </div>
+</div>
+

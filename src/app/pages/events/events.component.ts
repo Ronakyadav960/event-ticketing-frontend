@@ -1,19 +1,23 @@
 import { Component, OnDestroy, OnInit, inject, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { EventService } from '../../services/event.service';
+import { Subject, takeUntil } from 'rxjs';
+import { HeroCarouselComponent } from '../../shared/hero-carousel/hero-carousel.component';
 
 @Component({
   standalone: true,
   selector: 'app-events',
-  imports: [CommonModule, RouterModule, FormsModule, DatePipe], 
+  imports: [CommonModule, RouterModule, FormsModule, DatePipe, HeroCarouselComponent],
   templateUrl: './events.component.html',
   styleUrls: ['./events.component.css'],
 })
 export class EventsComponent implements OnInit, OnDestroy {
   private es = inject(EventService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private destroy$ = new Subject<void>();
 
   loading = false;
   loadingMore = false;
@@ -43,6 +47,11 @@ export class EventsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadCategories();
     this.fetchEvents('', true);
+
+    this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe((params) => {
+      const q = params.get('q');
+      this.q = q ? q : '';
+    });
   }
 
     loadCategories(): void {
@@ -212,6 +221,8 @@ export class EventsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.observer) this.observer.disconnect();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }
 
