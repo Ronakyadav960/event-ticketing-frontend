@@ -5,116 +5,21 @@ import { QRCodeComponent } from 'angularx-qrcode';
 import { BookingService } from '../../services/booking.service';
 import { finalize, take } from 'rxjs/operators';
 import { AuthService } from '../../auth/auth.service';
+import { PromotionService } from '../../services/promotion.service';
 
 @Component({
   standalone: true,
   selector: 'app-booking-confirmation',
   imports: [CommonModule, QRCodeComponent],
+  templateUrl: './booking-confirmation.component.html',
   styleUrls: ['./booking-confirmation.component.css'],
-  template: `
-    <div class="booking-wrapper">
-      <div class="ticket-shell" *ngIf="loading">
-        <div class="ticket-card">
-          <div class="ticket-header">
-            <div class="status-pill">Loading</div>
-            <div class="title">Preparing your ticket</div>
-            <div class="subtitle">Please wait...</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="ticket-shell" *ngIf="!loading && error">
-        <div class="ticket-card error">
-          <div class="ticket-header">
-            <div class="status-pill danger">Invalid Booking</div>
-            <div class="title">We could not verify this ticket</div>
-            <div class="subtitle">{{ error }}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="ticket-shell" *ngIf="!loading && booking">
-        <div class="ticket-card">
-          <div class="ticket-header">
-            <div class="status-pill success">Booking Confirmed</div>
-            <div class="title">{{ booking?.event?.title || booking?.eventTitle || 'Event Ticket' }}</div>
-            <div class="subtitle">Show this QR code at entry</div>
-          </div>
-
-          <div class="ticket-body">
-            <div class="left">
-              <div class="meta-grid">
-                <div class="meta-item">
-                  <div class="meta-label">Date</div>
-                  <div class="meta-value">{{ (booking?.showAt || booking?.event?.date || booking?.eventDate || booking?.createdAt) | date:'fullDate' }}</div>
-                </div>
-                <div class="meta-item">
-                  <div class="meta-label">Time</div>
-                  <div class="meta-value">{{ (booking?.showAt || booking?.event?.date || booking?.eventDate || booking?.createdAt) | date:'shortTime' }}</div>
-                </div>
-                <div class="meta-item">
-                  <div class="meta-label">Venue</div>
-                  <div class="meta-value">{{ booking?.event?.venue || booking?.eventVenue || '-' }}</div>
-                </div>
-                <div class="meta-item">
-                  <div class="meta-label">Seats</div>
-                  <div class="meta-value">{{ booking.seats ?? '-' }}</div>
-                </div>
-              </div>
-
-              <div class="divider"></div>
-
-              <div class="info-block">
-                <div class="info-title">Attendee</div>
-                <div class="info-row">
-                  <span>Name</span>
-                  <span>{{ booking.name || booking.user?.name || '-' }}</span>
-                </div>
-                <div class="info-row">
-                  <span>Email</span>
-                  <span>{{ booking.email || booking.user?.email || '-' }}</span>
-                </div>
-              </div>
-
-              <div class="info-block" *ngIf="booking?.registrationTemplate || booking?.registrationData">
-                <div class="info-title">Registration</div>
-                <div class="info-row">
-                  <span>Template</span>
-                  <span>{{ getRegistrationTemplateLabel(booking?.registrationTemplate) }}</span>
-                </div>
-                <div class="info-row" *ngFor="let item of getRegistrationItems(booking)">
-                  <span>{{ item.label }}</span>
-                  <span>{{ item.value }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="right">
-              <div class="qr-box" *ngIf="qrData">
-                <qrcode [qrdata]="qrData" [width]="180"></qrcode>
-                <div class="qr-label">Scan at gate</div>
-              </div>
-              <div class="ticket-id">Ticket ID: <strong>{{ booking.ticketId || ticketId }}</strong></div>
-              <div class="rules">
-                <div class="rules-title">Entry Rules</div>
-                <ul class="rules-list">
-                  <li>Carry a valid ID</li>
-                  <li>Gates open 30 minutes early</li>
-                  <li>Non-refundable unless canceled</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `
 })
 export class BookingConfirmationComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private bs = inject(BookingService);
   private cdr = inject(ChangeDetectorRef);
   private auth = inject(AuthService);
+  private promotionService = inject(PromotionService);
 
   booking: any = null;
   ticketId = '';
@@ -122,6 +27,40 @@ export class BookingConfirmationComponent implements OnInit {
 
   loading = true;
   error = '';
+
+  get eventTitle(): string {
+    return this.booking?.event?.title || this.booking?.eventTitle || 'Event Ticket';
+  }
+
+  get eventDateTime(): string {
+    return this.booking?.showAt || this.booking?.event?.date || this.booking?.eventDate || this.booking?.createdAt || '';
+  }
+
+  get venueLabel(): string {
+    return this.booking?.event?.venue || this.booking?.eventVenue || 'Venue to be announced';
+  }
+
+  get attendeeName(): string {
+    return this.booking?.name || this.booking?.user?.name || '-';
+  }
+
+  get attendeeEmail(): string {
+    return this.booking?.email || this.booking?.user?.email || '-';
+  }
+
+  get seatLabel(): string {
+    return String(this.booking?.seats ?? this.booking?.seatCount ?? '-');
+  }
+
+  get paymentStatusLabel(): string {
+    const raw = String(this.booking?.paymentStatus || 'confirmed');
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  }
+
+  get finalAmountLabel(): string {
+    const amount = Number(this.booking?.finalAmount ?? this.booking?.amount ?? this.booking?.totalAmount ?? 0);
+    return amount > 0 ? `Rs ${amount}` : 'Free';
+  }
 
   ngOnInit(): void {
     const tid = this.route.snapshot.paramMap.get('ticketId');
@@ -141,21 +80,16 @@ export class BookingConfirmationComponent implements OnInit {
       .pipe(
         take(1),
         finalize(() => {
-          // ✅ UI kabhi stuck nahi hogi
           this.loading = false;
           this.cdr.detectChanges();
         })
       )
       .subscribe({
         next: (res: any) => {
-          // ✅ backend direct booking ya wrapped: { booking: ... }
           this.booking = res?.booking ?? res?.data ?? res;
-
-          // ✅ QR always string
+          this.consumeBookingPromotion(this.booking);
           this.qrData = String(this.booking?.ticketId || tid);
-
           this.saveDownloadedTicket(this.booking, tid);
-
           this.cdr.detectChanges();
         },
         error: (err: any) => {
@@ -164,7 +98,6 @@ export class BookingConfirmationComponent implements OnInit {
             err?.message ||
             'Booking not found / unauthorized.';
           console.error('getByTicketId error:', err);
-
           this.cdr.detectChanges();
         }
       });
@@ -216,6 +149,13 @@ export class BookingConfirmationComponent implements OnInit {
     localStorage.setItem(key, JSON.stringify(list));
   }
 
+  private consumeBookingPromotion(booking: any): void {
+    const promotionId = booking?.promotionId || booking?.promotion?._id || booking?.promotion?.id || null;
+    const user = this.auth.getUser();
+    if (!promotionId || !user) return;
+    this.promotionService.consumePromotion(String(promotionId), user);
+  }
+
   getRegistrationTemplateLabel(template: string): string {
     if (template === 'workshop') return 'Workshop Form';
     if (template === 'seminar') return 'Seminar Form';
@@ -249,4 +189,3 @@ export class BookingConfirmationComponent implements OnInit {
       .replace(/\b\w/g, (c) => c.toUpperCase());
   }
 }
-

@@ -84,6 +84,22 @@
     </a>
 
     <a
+      class="drawer-link"
+      routerLink="/gifts"
+      routerLinkActive="active"
+      (click)="closeDrawer()">
+      Gifts
+    </a>
+
+    <a
+      class="drawer-link"
+      routerLink="/coupons"
+      routerLinkActive="active"
+      (click)="closeDrawer()">
+      Coupons
+    </a>
+
+    <a
       *ngIf="isCreator || isSuperAdmin"
       class="drawer-link"
       [routerLink]="isCreator ? '/creator-dashboard' : '/superadmin-dashboard'"

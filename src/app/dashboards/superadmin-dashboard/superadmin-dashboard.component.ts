@@ -7,8 +7,11 @@ import { BookingService } from '../../services/booking.service';
 import { HeroService, HeroImageDto } from '../../services/hero.service';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../../auth/auth.service';
+import { PromotionRecord, PromotionService } from '../../services/promotion.service';
 
 type RangeDays = 7 | 30;
+type AdminSection = 'overview' | 'users' | 'events' | 'bookings' | 'promotions' | 'media';
 
 @Component({
   standalone: true,
@@ -18,6 +21,7 @@ type RangeDays = 7 | 30;
   styleUrls: ['./superadmin-dashboard.component.css']
 })
 export class SuperadminDashboardComponent implements OnInit {
+  activeSection: AdminSection = 'overview';
 
   data: any;
   users: any[] = [];
@@ -54,6 +58,20 @@ export class SuperadminDashboardComponent implements OnInit {
   heroImages: HeroImageDto[] = [];
   heroUploading = false;
   heroError = '';
+  promoMsg = '';
+  adminPromotions: PromotionRecord[] = [];
+  promotionForm = {
+    title: '',
+    code: '',
+    kind: 'coupon' as 'coupon' | 'gift',
+    scope: 'platform' as 'platform' | 'event',
+    discountType: 'percent' as 'percent' | 'flat',
+    discountValue: 15,
+    eventId: '',
+    expiryDate: '',
+    maxClaims: 200,
+    description: '',
+  };
 
   pageSize = 5;
   eventPage = 1;
@@ -68,6 +86,8 @@ export class SuperadminDashboardComponent implements OnInit {
     private dashboardService: DashboardService,
     private bookingService: BookingService,
     private heroService: HeroService,
+    private authService: AuthService,
+    private promotionService: PromotionService,
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {}
@@ -79,6 +99,109 @@ export class SuperadminDashboardComponent implements OnInit {
     this.ensureEventsLoadedAll();
     this.ensureBookingsLoadedAll();
     this.loadHeroImages();
+    this.refreshPromotions();
+  }
+
+  setActiveSection(section: AdminSection): void {
+    this.activeSection = section;
+
+    if (section === 'users') {
+      this.selectedTop = 'users';
+      this.userPage = 1;
+      this.loadUsersPage('user', this.userPage);
+      return;
+    }
+
+    if (section === 'events') {
+      this.selectedTop = 'events';
+      this.eventPage = 1;
+      this.loadEventsPage(this.eventPage);
+      return;
+    }
+
+    if (section === 'bookings') {
+      this.selectedTop = 'bookings';
+      this.bookingPage = 1;
+      this.loadBookingsPage(this.bookingPage);
+      return;
+    }
+
+    this.selectedTop = null;
+    this.selectedSecondary = null;
+  }
+
+  showUserRole(role: 'creator' | 'user'): void {
+    this.selectedTop = role === 'creator' ? 'creators' : 'users';
+    if (role === 'creator') {
+      this.creatorPage = 1;
+      this.loadUsersPage('creator', this.creatorPage);
+      return;
+    }
+    this.userPage = 1;
+    this.loadUsersPage('user', this.userPage);
+  }
+
+  createPromotion(): void {
+    const title = this.promotionForm.title.trim();
+    const code = this.promotionForm.code.trim().toUpperCase();
+    const selectedEvent = this.eventsAll.find((item) => String(item?._id || item?.id || '') === this.promotionForm.eventId);
+
+    if (!title || !code) {
+      this.promoMsg = 'Title and code are required.';
+      return;
+    }
+
+    if (this.promotionForm.scope === 'event' && !selectedEvent) {
+      this.promoMsg = 'Select an event for event-specific offers.';
+      return;
+    }
+
+    this.promotionService.createPromotion(
+      {
+        title,
+        code,
+        kind: this.promotionForm.kind,
+        scope: this.promotionForm.scope,
+        discountType: this.promotionForm.discountType,
+        discountValue: this.promotionForm.discountValue,
+        eventId: selectedEvent?._id || selectedEvent?.id || null,
+        eventTitle: selectedEvent?.title || 'All events',
+        expiryDate: this.promotionForm.expiryDate,
+        maxClaims: this.promotionForm.maxClaims,
+        description: this.promotionForm.description,
+      },
+      this.authService.getUser()
+    );
+
+    this.promoMsg = `${code} is now available for users to claim.`;
+    this.promotionForm = {
+      title: '',
+      code: '',
+      kind: 'coupon',
+      scope: 'platform',
+      discountType: 'percent',
+      discountValue: 15,
+      eventId: '',
+      expiryDate: '',
+      maxClaims: 200,
+      description: '',
+    };
+    this.refreshPromotions();
+  }
+
+  promotionSummary(item: PromotionRecord): string {
+    return this.promotionService.describePromotion(item);
+  }
+
+  deletePromotion(item: PromotionRecord): void {
+    if (!confirm(`Delete ${item.code}?`)) return;
+    const result = this.promotionService.deletePromotion(item.id, this.authService.getUser());
+    this.promoMsg = result.message;
+    this.refreshPromotions();
+  }
+
+  private refreshPromotions(): void {
+    this.adminPromotions = this.promotionService.listAll();
   }
 
   setRange(days: RangeDays): void {

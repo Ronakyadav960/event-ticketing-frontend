@@ -1,55 +1,459 @@
-<div class="event-bg" [ngStyle]="bgStyle">
-  <div class="overlay"></div>
+    <div class="event-bg" [ngStyle]="bgStyle" [ngClass]="designTemplateClass">
+      <div class="overlay"></div>
 
-  <div class="content">
-    <div class="details-wrap">
+      <div class="content">
+        <div class="details-wrap">
+          <div *ngIf="loading" class="msg">Loading event...</div>
 
-      <div *ngIf="loading" class="msg">Loading event...</div>
-      <div *ngIf="error" class="msg error">{{ error }}</div>
+          <div *ngIf="!loading && error" class="msg error">Error: {{ error }}</div>
 
-      <div *ngIf="event">
-        <h2 class="title">{{ event.title }}</h2>
-        <p class="muted">
-          {{ event.venue }} | {{ event.date | date: 'medium' }}
-        </p>
+          <div *ngIf="!loading && event">
+            <div class="event-shell">
+              <section class="event-hero-card">
+                <div class="hero-copy">
+                  <div class="hero-badges">
+                    <span class="hero-badge">{{ event?.category || 'Event' }}</span>
+                    <span class="hero-badge">{{ event?.locationType || 'In-person' }}</span>
+                    <span class="hero-badge">{{ registrationTemplateLabel }}</span>
+                  </div>
+                  <h1 class="event-page-title">{{ event.title }}</h1>
+                  <p class="event-page-tagline">{{ eventTagline }}</p>
 
-        <div class="card">
-          <h3>ðŸŽŸ Book Tickets</h3>
+                  <div class="hero-meta-grid">
+                    <div class="hero-meta-card">
+                      <span class="hero-meta-label">Date</span>
+                      <strong>{{ formattedEventDate }}</strong>
+                    </div>
+                    <div class="hero-meta-card">
+                      <span class="hero-meta-label">Time</span>
+                      <strong>{{ formattedEventTime }}</strong>
+                    </div>
+                    <div class="hero-meta-card">
+                      <span class="hero-meta-label">Venue</span>
+                      <strong>{{ displayVenue }}</strong>
+                    </div>
+                    <div class="hero-meta-card">
+                      <span class="hero-meta-label">Price</span>
+                      <strong>{{ bookingPriceLabel }}</strong>
+                    </div>
+                  </div>
 
-          <div *ngIf="msg" class="msg ok">{{ msg }}</div>
+                  <div class="highlight-strip">
+                    <div class="highlight-pill" *ngFor="let item of eventHighlights">
+                      <span class="highlight-name">{{ item.label }}</span>
+                      <strong>{{ item.value }}</strong>
+                    </div>
+                  </div>
 
-          <form (ngSubmit)="book()" #f="ngForm">
-            <input
-              type="text"
-              placeholder="Name"
-              [(ngModel)]="name"
-              name="name"
-              required
-            />
+                  <div class="hero-actions">
+                    <button class="btn primary" type="button" (click)="openBooking()">{{ isFreeEvent ? 'Book Free Ticket' : 'Reserve Seats' }}</button>
+                    <button class="btn ghost" type="button">Share Event</button>
+                  </div>
+                </div>
 
-            <input
-              type="email"
-              placeholder="Email"
-              [(ngModel)]="email"
-              name="email"
-              required
-            />
+                <aside class="event-side-card">
+                  <div class="side-card-head">
+                    <div class="side-kicker">Quick Booking</div>
+                    <div class="side-price">{{ bookingPriceLabel }}</div>
+                  </div>
+                  <div class="side-copy">{{ event?.venue || 'Venue details will appear here.' }}</div>
+                  <div class="side-copy">{{ formattedEventDate }} · {{ formattedEventTime }}</div>
 
-            <input
-              type="number"
-              placeholder="Seats"
-              [(ngModel)]="seats"
-              name="seats"
-              min="1"
-              required
-            />
+                  <div class="quick-select-block" *ngIf="showDateOptions.length">
+                    <div class="quick-select-title">Choose Date</div>
+                    <div class="quick-chip-row">
+                      <button
+                        class="quick-chip"
+                        *ngFor="let d of showDateOptions"
+                        type="button"
+                        [class.active]="selectedShowDate === d"
+                        (click)="selectedShowDate = d"
+                      >
+                        {{ d | date:'dd MMM' }}
+                      </button>
+                    </div>
+                  </div>
 
-            <button [disabled]="f.invalid || submitting">
-              {{ submitting ? 'Redirecting...' : 'Proceed to Payment' }}
-            </button>
-          </form>
+                  <div class="quick-select-block" *ngIf="showTimeOptions.length">
+                    <div class="quick-select-title">Choose Time</div>
+                    <div class="quick-chip-row">
+                      <button
+                        class="quick-chip"
+                        *ngFor="let t of showTimeOptions"
+                        type="button"
+                        [class.active]="selectedShowTime === t"
+                        (click)="selectedShowTime = t"
+                      >
+                        {{ t }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="side-offer-note" *ngIf="claimablePromotions.length || claimedPromotions.length">
+                    Offers available for this event
+                  </div>
+
+                  <button class="btn primary full" type="button" (click)="openBooking()">{{ isFreeEvent ? 'Continue Free Booking' : 'Continue to Booking' }}</button>
+                </aside>
+              </section>
+
+              <section class="event-info-band">
+                <article class="info-band-card">
+                  <div class="info-band-title">About</div>
+                  <p>{{ aboutSnippet }}</p>
+                </article>
+                <article class="info-band-card">
+                  <div class="info-band-title">Schedule</div>
+                  <p>{{ formattedEventDate }} · {{ formattedEventTime }}</p>
+                </article>
+                <article class="info-band-card">
+                  <div class="info-band-title">Venue</div>
+                  <p>{{ displayVenue }}</p>
+                </article>
+                <article class="info-band-card">
+                  <div class="info-band-title">Booking</div>
+                  <p>{{ bookingAssistText }}</p>
+                </article>
+              </section>
+            </div>
+
+            <ng-container [ngSwitch]="designTemplateKey">
+              <ng-container *ngSwitchCase="'movie'">
+                <div class="layout movie-layout" [style.--theme-color]="designThemeColor">
+                  <div class="movie-left">
+                    <div class="hero-media">
+                      <img *ngIf="eventImageUrl && !eventImgFailed; else movieNoImg" [src]="eventImageUrl" (error)="onEventImgError()" alt="poster" />
+                      <ng-template #movieNoImg>
+                        <div class="poster-fallback">No Image</div>
+                      </ng-template>
+                    </div>
+                    <div class="chip-row">
+                      <span class="chip">{{ event?.category || 'Movie' }}</span>
+                      <span class="chip">{{ event?.locationType || 'In-person' }}</span>
+                    </div>
+                    <div class="section">
+                      <div class="section-title">About the Event</div>
+                      <div class="desc" [innerHTML]="event.description || 'No description yet.'"></div>
+                    </div>
+                  </div>
+                  <div class="movie-right">
+                    <div class="ticket-card">
+                      <div class="kicker">Now Showing</div>
+                      <h2 class="title">{{ event.title }}</h2>
+                      <div class="meta-line">{{ event.date | date: 'fullDate' }} · {{ event.date | date: 'shortTime' }}</div>
+                      <div class="meta-line">{{ event.venue || '-' }}</div>
+                      <div class="price-row">From Rs {{ event.price ?? 0 }}</div>
+                      <button class="btn primary" type="button" (click)="openBooking()">{{ designConfig?.badgeText || 'Book Now' }}</button>
+                    </div>                  </div>
+                </div>
+              </ng-container>
+
+              <ng-container *ngSwitchCase="'concert'">
+                <div class="layout concert-layout" [style.--theme-color]="designThemeColor">
+                  <div class="concert-hero" [ngStyle]="{'background-image': eventImageUrl ? 'url(' + eventImageUrl + ')' : ''}">
+                    <div class="concert-overlay"></div>
+                    <div class="concert-content">
+                      <div class="kicker glow">{{ designConfig?.heroKicker || 'Live Concert' }}</div>
+                      <h2 class="title">{{ event.title }}</h2>
+                      <div class="meta-line">{{ event.date | date: 'fullDate' }} · {{ event.date | date: 'shortTime' }}</div>
+                      <div class="meta-line">{{ event.venue || '-' }}</div>
+                      <div class="price-row">Rs {{ event.price ?? 0 }}</div>
+                      <button class="btn primary" type="button" (click)="openBooking()">{{ designConfig?.ctaText || 'Get Tickets' }}</button>
+                    </div>
+                  </div>
+                  <div class="concert-body">
+                    <div class="section">
+                      <div class="section-title">About the Show</div>
+                      <div class="desc" [innerHTML]="event.description || 'No description yet.'"></div>
+                    </div>                  </div>
+                </div>
+              </ng-container>
+
+              <ng-container *ngSwitchCase="'comedy'">
+                <div class="layout comedy-layout" [style.--theme-color]="designThemeColor">
+                  <div class="comedy-card">
+                    <div class="comedy-left">
+                      <div class="kicker">Comedy Night</div>
+                      <h2 class="title">{{ event.title }}</h2>
+                      <div class="meta-line">{{ event.date | date: 'fullDate' }} · {{ event.date | date: 'shortTime' }}</div>
+                      <div class="meta-line">{{ event.venue || '-' }}</div>
+                      <div class="price-row">Rs {{ event.price ?? 0 }}</div>
+                      <div class="desc" [innerHTML]="event.description || 'No description yet.'"></div>
+                    </div>
+                    <div class="comedy-right">
+                      <div class="hero-media square">
+                        <img *ngIf="eventImageUrl && !eventImgFailed; else comedyNoImg" [src]="eventImageUrl" (error)="onEventImgError()" alt="poster" />
+                        <ng-template #comedyNoImg>
+                          <div class="poster-fallback">No Image</div>
+                        </ng-template>
+                      </div>
+                      <button class="btn primary" type="button" (click)="openBooking()">{{ designConfig?.ctaText || 'Book Seats' }}</button>
+                    </div>
+                  </div>                </div>
+              </ng-container>
+
+              <ng-container *ngSwitchDefault>
+                <div class="layout default-layout" [style.--theme-color]="designThemeColor">
+                  <div class="default-left">
+                    <div class="kicker">{{ event?.category || 'Event' }}</div>
+                    <h2 class="title">{{ event.title }}</h2>
+                    <div class="meta-stack">
+                      <div class="meta-item">
+                        <span class="meta-label">Date</span>
+                        <span>{{ event.date | date: 'fullDate' }}</span>
+                      </div>
+                      <div class="meta-item">
+                        <span class="meta-label">Time</span>
+                        <span>{{ event.date | date: 'shortTime' }}</span>
+                      </div>
+                      <div class="meta-item">
+                        <span class="meta-label">Venue</span>
+                        <span>{{ event.venue || '-' }}</span>
+                      </div>
+                      <div class="meta-item">
+                        <span class="meta-label">Type</span>
+                        <span>{{ event?.locationType || 'In-person' }}</span>
+                      </div>
+                    </div>
+                    <div class="hero-media wide">
+                      <img *ngIf="eventImageUrl && !eventImgFailed; else defaultNoImg" [src]="eventImageUrl" (error)="onEventImgError()" alt="poster" />
+                      <ng-template #defaultNoImg>
+                        <div class="poster-fallback">No Image</div>
+                      </ng-template>
+                    </div>
+                    <div class="section">
+                      <div class="section-title">Overview</div>
+                      <div class="desc" [innerHTML]="event.description || 'No description yet.'"></div>
+                    </div>
+                  </div>
+
+                  <div class="default-right">
+                    <div class="price-card">
+                      <div class="price-label">Starting From</div>
+                      <div class="price-amount">Rs {{ event.price ?? 0 }}</div>
+
+                      <button class="btn primary" type="button" (click)="openBooking()">Reserve Seats</button>
+                    </div>
+
+                    <div class="locked-card" *ngIf="!showBookingForm">
+                      <div class="locked-title">Booking unlocked on click</div>
+                      <div class="locked-sub">Tap "Reserve Seats" to fill details.</div>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+            </ng-container>
+
+            <ng-template #bookingForm>
+              <form (ngSubmit)="book()" #f="ngForm">
+                <div class="form-group">
+                  <label>Name</label>
+                  <input class="form-control" name="name" [(ngModel)]="name" required />
+                </div>
+
+                <div class="form-group">
+                  <label>Email</label>
+                  <input class="form-control" name="email" [(ngModel)]="email" required />
+                </div>
+
+                <div class="form-group" *ngIf="isStandard">
+                  <label>Phone</label>
+                  <input class="form-control" name="phone" [(ngModel)]="phone" required />
+                </div>
+
+                <div class="form-group" *ngIf="isWorkshop">
+                  <label>Experience</label>
+                  <input class="form-control" name="experience" [(ngModel)]="experience" required />
+                </div>
+
+                <div class="form-group" *ngIf="isWorkshop">
+                  <label>Skill Level</label>
+                  <select class="form-control" name="skillLevel" [(ngModel)]="skillLevel" required>
+                    <option value="">Select level</option>
+                    <option>Beginner</option>
+                    <option>Intermediate</option>
+                    <option>Advanced</option>
+                  </select>
+                </div>
+
+                <div class="form-group" *ngIf="isSeminar">
+                  <label>Company</label>
+                  <input class="form-control" name="company" [(ngModel)]="company" required />
+                </div>
+
+                <div class="form-group" *ngIf="isSeminar">
+                  <label>Designation</label>
+                  <input class="form-control" name="designation" [(ngModel)]="designation" required />
+                </div>
+
+                <div class="form-group" *ngFor="let f of customFields; let i = index">
+                  <label>
+                    {{ f.label }}
+                    <span *ngIf="f.required" class="req">*</span>
+                  </label>
+
+                  <input
+                    *ngIf="isTextType(f.type)"
+                    class="form-control"
+                    [type]="inputTypeFor(f.type)"
+                    [name]="'custom_' + i"
+                    [ngModel]="customFieldValues[fieldKey(f, i)]"
+                    (ngModelChange)="setCustomValue(f, i, $event)"
+                    [required]="f.required"
+                  />
+
+                  <textarea
+                    *ngIf="f.type === 'textarea'"
+                    class="form-control"
+                    rows="3"
+                    [name]="'custom_' + i"
+                    [ngModel]="customFieldValues[fieldKey(f, i)]"
+                    (ngModelChange)="setCustomValue(f, i, $event)"
+                    [required]="f.required"
+                  ></textarea>
+
+                  <select
+                    *ngIf="f.type === 'select'"
+                    class="form-control"
+                    [name]="'custom_' + i"
+                    [ngModel]="customFieldValues[fieldKey(f, i)]"
+                    (ngModelChange)="setCustomValue(f, i, $event)"
+                    [required]="f.required"
+                  >
+                    <option value="">Select option</option>
+                    <option *ngFor="let o of f.options || []" [value]="o">{{ o }}</option>
+                  </select>
+
+                  <label *ngIf="f.type === 'checkbox'" class="check-row">
+                    <input
+                      type="checkbox"
+                      [checked]="customFieldValues[fieldKey(f, i)]"
+                      (change)="setCustomValue(f, i, $event.target.checked)"
+                    />
+                    <span>Yes</span>
+                  </label>
+                </div>
+
+                <div class="form-group">
+                  <label>Show Date</label>
+                  <select class="form-control" name="showDate" [(ngModel)]="selectedShowDate" required>
+                    <option value="">Select date</option>
+                    <option *ngFor="let d of showDateOptions" [value]="d">
+                      {{ d | date: 'fullDate' }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Show Time</label>
+                  <select class="form-control" name="showTime" [(ngModel)]="selectedShowTime" required>
+                    <option value="">Select time</option>
+                    <option *ngFor="let t of showTimeOptions" [value]="t">{{ t }}</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Seats</label>
+                  <input
+                    class="form-control"
+                    type="number"
+                    name="seats"
+                    [(ngModel)]="seats"
+                    min="1"
+                    required
+                  />
+                </div>
+
+                <div class="offer-shell" *ngIf="claimablePromotions.length || claimedPromotions.length">
+                  <div class="offer-title">Gift Cards & Coupons</div>
+
+                  <div class="offer-subtitle" *ngIf="claimablePromotions.length">Claim and use instantly for this booking.</div>
+                  <div class="offer-list" *ngIf="claimablePromotions.length">
+                    <div class="offer-card" *ngFor="let item of claimablePromotions">
+                      <div>
+                        <div class="offer-code">{{ item.code }}</div>
+                        <div class="offer-name">{{ item.title }}</div>
+                        <div class="offer-copy">{{ promotionCaption(item) }}</div>
+                      </div>
+                      <button class="claim-btn" type="button" (click)="claimPromotion(item.id)">Claim</button>
+                    </div>
+                  </div>
+
+                  <div class="offer-subtitle" *ngIf="claimedPromotions.length">Apply one claimed offer.</div>
+                  <div class="offer-list" *ngIf="claimedPromotions.length">
+                    <label class="offer-card selectable" *ngFor="let item of claimedPromotions" [class.selected]="selectedPromotionId === item.id">
+                      <div class="offer-radio-wrap">
+                        <input
+                          type="radio"
+                          name="claimedPromotion"
+                          [value]="item.id"
+                          [checked]="selectedPromotionId === item.id"
+                          (change)="selectedPromotionId = item.id"
+                        />
+                      </div>
+                      <div>
+                        <div class="offer-code">{{ item.code }}</div>
+                        <div class="offer-name">{{ item.title }}</div>
+                        <div class="offer-copy">{{ promotionCaption(item) }}</div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <button class="clear-offer-btn" *ngIf="selectedPromotionId" type="button" (click)="selectedPromotionId = ''">
+                    Remove Applied Offer
+                  </button>
+                </div>
+
+                <div class="summary-card">
+                  <div class="summary-row">
+                    <span>Ticket Price</span>
+                    <strong>Rs {{ unitPriceRupees }}</strong>
+                  </div>
+                  <div class="summary-row">
+                    <span>Seats</span>
+                    <strong>{{ seats || 1 }}</strong>
+                  </div>
+                  <div class="summary-row">
+                    <span>Subtotal</span>
+                    <strong>Rs {{ subtotalRupees }}</strong>
+                  </div>
+                  <div class="summary-row discount" *ngIf="selectedPromotion">
+                    <span>Discount ({{ selectedPromotion.code }})</span>
+                    <strong>- Rs {{ discountRupees }}</strong>
+                  </div>
+                  <div class="summary-row total">
+                    <span>Final Payable</span>
+                    <strong>Rs {{ finalPayableRupees }}</strong>
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <button class="btn primary compact" type="submit" [disabled]="f.invalid || submitting">
+                    {{ submitting ? (isFreeEvent ? 'Booking...' : 'Redirecting to payment...') : (isFreeEvent ? 'Book Ticket' : 'Proceed to Payment') }}
+                  </button>
+                  <button class="btn ghost compact" type="button" (click)="onCancelBooking()">Cancel</button>
+                </div>
+              </form>
+            </ng-template>
+
+            <div
+              class="booking-modal-backdrop"
+              *ngIf="showBookingForm"
+              (click)="closeBooking()"
+            >
+              <div class="booking-modal" (click)="$event.stopPropagation()">
+                <div class="booking-modal-header">
+                  <div class="modal-title">Book Tickets</div>
+                  <button class="modal-close" type="button" (click)="closeBooking()">&times;</button>
+                </div>
+                <div *ngIf="msg" class="msg">{{ msg }}</div>
+                <div class="booking-modal-body">
+                  <ng-container *ngTemplateOutlet="bookingForm"></ng-container>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
+  

@@ -3,13 +3,136 @@
   <div class="dashboard-header">
     <div>
       <h2>Super Admin Dashboard</h2>
+      <p class="subtitle">Use the internal workspace menu to switch between overview, people, events, bookings, promotions, and hero media.</p>
     </div>
   </div>
 
   <div class="error-box" *ngIf="errorMsg">{{ errorMsg }}</div>
 
+  <div class="admin-shell">
+    <aside class="admin-sidebar" *ngIf="!loading">
+      <button class="admin-nav-btn" [class.active]="activeSection==='overview'" type="button" (click)="setActiveSection('overview')">
+        <span class="admin-nav-label">Overview</span>
+        <span class="admin-nav-meta">KPIs and trends</span>
+      </button>
+      <button class="admin-nav-btn" [class.active]="activeSection==='users'" type="button" (click)="setActiveSection('users')">
+        <span class="admin-nav-label">Users</span>
+        <span class="admin-nav-meta">Users and creators</span>
+      </button>
+      <button class="admin-nav-btn" [class.active]="activeSection==='events'" type="button" (click)="setActiveSection('events')">
+        <span class="admin-nav-label">Events</span>
+        <span class="admin-nav-meta">Catalog and schedule</span>
+      </button>
+      <button class="admin-nav-btn" [class.active]="activeSection==='bookings'" type="button" (click)="setActiveSection('bookings')">
+        <span class="admin-nav-label">Bookings</span>
+        <span class="admin-nav-meta">Orders and tickets</span>
+      </button>
+      <button class="admin-nav-btn" [class.active]="activeSection==='promotions'" type="button" (click)="setActiveSection('promotions')">
+        <span class="admin-nav-label">Promotions</span>
+        <span class="admin-nav-meta">Coupons and gifts</span>
+      </button>
+      <button class="admin-nav-btn" [class.active]="activeSection==='media'" type="button" (click)="setActiveSection('media')">
+        <span class="admin-nav-label">Hero Images</span>
+        <span class="admin-nav-meta">Homepage media</span>
+      </button>
+    </aside>
+
+    <section class="admin-content">
+
+  <div class="promo-layout" *ngIf="!loading && activeSection==='promotions'">
+    <div class="table-card promo-builder">
+      <div class="table-title">Gift & Coupon Control</div>
+      <p class="promo-sub">Create platform-wide or event-specific offers that users can claim from the hamburger menu and use while booking.</p>
+
+      <div class="promo-msg" *ngIf="promoMsg">{{ promoMsg }}</div>
+
+      <div class="promo-form-grid">
+        <label class="promo-field">
+          <span>Offer Title</span>
+          <input [(ngModel)]="promotionForm.title" placeholder="Weekend Blast" />
+        </label>
+
+        <label class="promo-field">
+          <span>Code</span>
+          <input [(ngModel)]="promotionForm.code" placeholder="WEEKEND15" />
+        </label>
+
+        <label class="promo-field">
+          <span>Offer Type</span>
+          <select [(ngModel)]="promotionForm.kind">
+            <option value="coupon">Coupon</option>
+            <option value="gift">Gift Card</option>
+          </select>
+        </label>
+
+        <label class="promo-field">
+          <span>Scope</span>
+          <select [(ngModel)]="promotionForm.scope">
+            <option value="platform">All Events</option>
+            <option value="event">Single Event</option>
+          </select>
+        </label>
+
+        <label class="promo-field">
+          <span>Discount Mode</span>
+          <select [(ngModel)]="promotionForm.discountType">
+            <option value="percent">Percent</option>
+            <option value="flat">Flat Amount</option>
+          </select>
+        </label>
+
+        <label class="promo-field">
+          <span>Discount Value</span>
+          <input type="number" min="1" [(ngModel)]="promotionForm.discountValue" />
+        </label>
+
+        <label class="promo-field" *ngIf="promotionForm.scope === 'event'">
+          <span>Event</span>
+          <select [(ngModel)]="promotionForm.eventId">
+            <option value="">Select event</option>
+            <option *ngFor="let e of eventsAll" [value]="e?._id || e?.id">{{ e?.title }}</option>
+          </select>
+        </label>
+
+        <label class="promo-field">
+          <span>Expiry Date</span>
+          <input type="date" [(ngModel)]="promotionForm.expiryDate" />
+        </label>
+
+        <label class="promo-field">
+          <span>Max Claims</span>
+          <input type="number" min="1" [(ngModel)]="promotionForm.maxClaims" />
+        </label>
+      </div>
+
+      <label class="promo-field full">
+        <span>Description</span>
+        <textarea rows="3" [(ngModel)]="promotionForm.description" placeholder="Optional note for the users"></textarea>
+      </label>
+
+      <button class="btn small" type="button" (click)="createPromotion()">Create Offer</button>
+    </div>
+
+    <div class="table-card promo-list-card">
+      <div class="table-title">All Active Offers</div>
+      <div class="promo-list-item" *ngFor="let item of adminPromotions">
+        <div class="promo-list-top">
+          <span class="promo-tag">{{ item.kind }}</span>
+          <span class="promo-code">{{ item.code }}</span>
+        </div>
+        <div class="promo-name">{{ item.title }}</div>
+        <div class="promo-copy">{{ promotionSummary(item) }}</div>
+        <div class="promo-copy">Created by {{ item.createdByName }} • {{ item.claimedBy.length }}/{{ item.maxClaims }} claimed</div>
+        <div class="promo-actions">
+          <button class="btn small danger" type="button" (click)="deletePromotion(item)">Delete</button>
+        </div>
+      </div>
+      <div class="empty-mini" *ngIf="adminPromotions.length === 0">No offers created yet.</div>
+    </div>
+  </div>
+
   <!-- ===== Must-have Admin Overview ===== -->
-  <div class="table-card hero-admin" *ngIf="!loading">
+  <div class="table-card hero-admin" *ngIf="!loading && activeSection==='media'">
     <div class="table-title">Hero Images (max 6)</div>
     <div class="hero-actions">
       <input
@@ -33,7 +156,7 @@
     </div>
   </div>
 
-  <div class="kpi-grid" *ngIf="!loading">
+  <div class="kpi-grid" *ngIf="!loading && activeSection==='overview'">
     <div class="kpi-card">
       <div class="kpi-label">Total Events</div>
       <div class="kpi-value">{{ totalEventsCount }}</div>
@@ -61,7 +184,7 @@
     </div>
   </div>
 
-  <div class="admin-charts" *ngIf="!loading">
+  <div class="admin-charts" *ngIf="!loading && activeSection==='overview'">
     <div class="chart-card">
       <div class="chart-head">
         <div class="chart-title">Revenue Trend (last {{ rangeDays }} days)</div>
@@ -101,7 +224,7 @@
     </div>
   </div>
 
-  <div class="admin-tables" *ngIf="!loading">
+  <div class="admin-tables" *ngIf="!loading && activeSection==='overview'">
     <div class="table-card">
       <div class="table-title">Recent bookings</div>
       <div class="mini-table">
@@ -146,7 +269,7 @@
   </div>
 
   <!-- Top Graph -->
-  <div class="graph-card" *ngIf="data; else loadingBlock">
+  <div class="graph-card" *ngIf="activeSection==='events' && data">
     <div class="graph-title">Weekly Events Overview</div>
     <div class="graph-controls">
       <div class="control">
@@ -178,26 +301,26 @@
   </div>
 
   <!-- Top Buttons -->
-  <div class="top-buttons" *ngIf="data">
-    <button class="stat-btn" [class.active]="selectedTop==='creators'" (click)="selectTop('creators')">
+  <div class="top-buttons" *ngIf="data && (activeSection==='users' || activeSection==='events' || activeSection==='bookings')">
+    <button class="stat-btn" *ngIf="activeSection==='users'" [class.active]="selectedTop==='creators'" type="button" (click)="showUserRole('creator')">
       Total Creators
       <span class="stat-value">{{ totalCreators }}</span>
     </button>
-    <button class="stat-btn" [class.active]="selectedTop==='users'" (click)="selectTop('users')">
+    <button class="stat-btn" *ngIf="activeSection==='users'" [class.active]="selectedTop==='users'" type="button" (click)="showUserRole('user')">
       Total Users
       <span class="stat-value">{{ totalUsersCount }}</span>
     </button>
-    <button class="stat-btn" [class.active]="selectedTop==='events'" (click)="selectTop('events')">
+    <button class="stat-btn" *ngIf="activeSection==='events'" [class.active]="selectedTop==='events'" type="button" (click)="setActiveSection('events')">
       Total Events
       <span class="stat-value">{{ totalEventsCount }}</span>
     </button>
-    <button class="stat-btn" [class.active]="selectedTop==='bookings'" (click)="selectTop('bookings')">
+    <button class="stat-btn" *ngIf="activeSection==='bookings'" [class.active]="selectedTop==='bookings'" type="button" (click)="setActiveSection('bookings')">
       Total Bookings
       <span class="stat-value">{{ totalBookingsCount }}</span>
     </button>
   </div>
 
-  <div class="detail-box" *ngIf="selectedTop">
+  <div class="detail-box" *ngIf="selectedTop && (activeSection==='users' || activeSection==='events' || activeSection==='bookings')">
     <div class="list-title" *ngIf="selectedTop==='creators'">Creators List</div>
     <div class="list-title" *ngIf="selectedTop==='users'">Users List</div>
     <div class="list-title" *ngIf="selectedTop==='events'">Events List</div>
@@ -290,7 +413,7 @@
   </div>
 
   <!-- Secondary Buttons -->
-  <div class="secondary-buttons" *ngIf="selectedTop">
+  <div class="secondary-buttons" *ngIf="activeSection==='events' && selectedTop==='events'">
     <button class="stat-btn ghost" [class.active]="selectedSecondary==='upcoming'" (click)="selectSecondary('upcoming')">
       Upcoming Events
     </button>
@@ -302,10 +425,13 @@
     </button>
   </div>
 
-  <div class="detail-box" *ngIf="selectedSecondary">
-    <div *ngIf="selectedSecondary==='upcoming'">Upcoming events: <b>{{ upcomingEventsCount }}</b></div>
-    <div *ngIf="selectedSecondary==='creatorsWithEvents'">Creators with events: <b>{{ creatorsWithEventsCount }}</b></div>
-    <div *ngIf="selectedSecondary==='past'">Past events: <b>{{ pastEventsCount }}</b></div>
+  <div class="detail-box" *ngIf="activeSection==='events' && selectedSecondary">
+  <div *ngIf="selectedSecondary==='upcoming'">Upcoming events: <b>{{ upcomingEventsCount }}</b></div>
+  <div *ngIf="selectedSecondary==='creatorsWithEvents'">Creators with events: <b>{{ creatorsWithEventsCount }}</b></div>
+  <div *ngIf="selectedSecondary==='past'">Past events: <b>{{ pastEventsCount }}</b></div>
+  </div>
+
+    </section>
   </div>
 
 </div>
@@ -410,5 +536,3 @@
     </div>
   </div>
 </div>
-
-

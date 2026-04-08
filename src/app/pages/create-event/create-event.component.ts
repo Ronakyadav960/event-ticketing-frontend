@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -7,6 +7,7 @@ import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 
 type CustomFieldType = 'text' | 'email' | 'phone' | 'number' | 'textarea' | 'select' | 'checkbox';
+type CreateEventStep = 'basic' | 'datetime' | 'design' | 'tickets' | 'customize' | 'seo' | 'settings';
 
 @Component({
   standalone: true,
@@ -15,7 +16,7 @@ type CustomFieldType = 'text' | 'email' | 'phone' | 'number' | 'textarea' | 'sel
   templateUrl: './create-event.component.html',
   styleUrls: ['./create-event.component.css'],
 })
-export class CreateEventComponent implements OnInit {
+export class CreateEventComponent implements OnInit, AfterViewInit {
   private readonly customFieldTypes: CustomFieldType[] = ['text', 'email', 'phone', 'number', 'textarea', 'select', 'checkbox'];
 
   private es = inject(EventService);
@@ -27,6 +28,7 @@ export class CreateEventComponent implements OnInit {
   eventId: string | null = null;
 
   title = '';
+  tagline = '';
   description = '';
   // Legacy single datetime (kept for backward compatibility; computed from schedule on submit)
   date = '';
@@ -36,14 +38,22 @@ export class CreateEventComponent implements OnInit {
   endDate = '';
   showTimes: string[] = ['19:00'];
   venue = '';
+  meetingLink = '';
   price = 0;
   totalSeats = 1;
   category = '';
   customCategory = '';
   locationType = '';
+  language = 'English';
+  ageRestriction = 'All Ages';
+  timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
+  isMultiDate = false;
+  mapQuery = '';
   registrationTemplate = 'standard';
   designTemplate = 'clean-hero';
   imagePreset = 'preset-a';
+  bannerFile: File | null = null;
+  thumbnailFile: File | null = null;
   readonly customCategoryValue = '__custom__';
   categories: string[] = [];
   private readonly defaultCategories = ['Conference', 'Workshop', 'Seminar', 'Concert', 'Webinar', 'Movie', 'Comedy', 'Sports'];
@@ -56,8 +66,35 @@ export class CreateEventComponent implements OnInit {
     badgeText: 'Book Now',
     heroKicker: 'Live Event',
     ctaText: 'Book Tickets',
-    themeColor: '#ef4444'
+    themeColor: '#6d28d9',
+    overlayColor: '#0f172a',
+    overlayOpacity: 55,
+    gradientOverlay: true,
+    textAlign: 'left' as 'left' | 'center' | 'right',
+    buttonStyle: 'solid' as 'solid' | 'outline' | 'rounded',
+    darkMode: false,
+    showLogo: false,
+    showWatermark: false,
   };
+  previewMode: 'desktop' | 'mobile' = 'desktop';
+  ticketMode: 'free' | 'paid' | 'donation' = 'paid';
+  earlyBirdEnabled = false;
+  discountCodesEnabled = false;
+  tieredPricingEnabled = false;
+  speakersEnabled = true;
+  agendaEnabled = true;
+  faqsEnabled = true;
+  sponsorsEnabled = false;
+  customSections: Array<{ title: string; body: string }> = [];
+  customSectionDraft = { title: '', body: '' };
+  slug = '';
+  metaTitle = '';
+  metaDescription = '';
+  socialPreviewImage = '';
+  visibility: 'Public' | 'Private' | 'Unlisted' = 'Public';
+  approvalRequired = false;
+  refundPolicy = '';
+  termsText = '';
   customFields: Array<{
     label: string;
     type: CustomFieldType;
@@ -75,9 +112,8 @@ export class CreateEventComponent implements OnInit {
   selectedFile: File | null = null;
   imagePreviewUrl: string | null = null;
   existingImageUrl: string | null = null;
-  selectedCreateStep: 'basic' | 'registration' | 'design' | 'images' | 'preview' = 'basic';
+  selectedCreateStep: CreateEventStep = 'basic';
   @ViewChild('descEditor') descEditor?: ElementRef<HTMLDivElement>;
-
   loading = false;
   successMessage = '';
   errorMessage = '';
@@ -120,7 +156,8 @@ export class CreateEventComponent implements OnInit {
       }
     });
   }
-// =============================\r\n  // IMAGE URL FIX (for prod/local)
+  // =============================
+  // IMAGE URL FIX (for prod/local)
   // =============================
   getImageUrl(path: string | null): string {
     if (!path) return '';
@@ -243,64 +280,144 @@ export class CreateEventComponent implements OnInit {
       });
   }
 
-  selectCreateStep(key: 'basic' | 'registration' | 'design' | 'images' | 'preview') {
+  readonly createSteps: Array<{ key: CreateEventStep; title: string; meta: string }> = [
+    { key: 'basic', title: 'Basic', meta: 'Identity and copy' },
+    { key: 'datetime', title: 'Date', meta: 'Time and location' },
+    { key: 'design', title: 'Design', meta: 'Banner and visuals' },
+    { key: 'tickets', title: 'Tickets', meta: 'Pricing and limits' },
+    { key: 'customize', title: 'Customize', meta: 'Sections and content' },
+    { key: 'seo', title: 'SEO', meta: 'Slug and sharing' },
+    { key: 'settings', title: 'Settings', meta: 'Visibility and rules' },
+  ];
+
+  selectCreateStep(key: CreateEventStep) {
+    if (!this.canOpenStep(key)) return;
     this.selectedCreateStep = key;
   }
 
   goNextStep() {
     if (this.selectedCreateStep === 'basic' && this.canProceedBasic) {
-      this.selectedCreateStep = 'registration';
+      this.selectedCreateStep = 'datetime';
       return;
     }
-    if (this.selectedCreateStep === 'registration' && this.canProceedRegistration) {
+    if (this.selectedCreateStep === 'datetime' && this.canProceedDateTime) {
       this.selectedCreateStep = 'design';
       return;
     }
     if (this.selectedCreateStep === 'design' && this.canProceedDesign) {
-      this.selectedCreateStep = 'images';
+      this.selectedCreateStep = 'tickets';
       return;
     }
-    if (this.selectedCreateStep === 'images' && this.canProceedImages) {
-      this.selectedCreateStep = 'preview';
+    if (this.selectedCreateStep === 'tickets' && this.canProceedTickets) {
+      this.selectedCreateStep = 'customize';
       return;
     }
+    if (this.selectedCreateStep === 'customize' && this.canProceedCustomize) {
+      this.selectedCreateStep = 'seo';
+      return;
+    }
+    if (this.selectedCreateStep === 'seo' && this.canProceedSeo) {
+      this.selectedCreateStep = 'settings';
+    }
+  }
+
+  ngAfterViewInit(): void {
+    this.syncEditorFromDescription();
   }
 
   goPrevStep() {
-    if (this.selectedCreateStep === 'preview') { this.selectedCreateStep = 'images'; return; }
-    if (this.selectedCreateStep === 'images') { this.selectedCreateStep = 'design'; return; }
-    if (this.selectedCreateStep === 'design') { this.selectedCreateStep = 'registration'; return; }
-    if (this.selectedCreateStep === 'registration') { this.selectedCreateStep = 'basic'; return; }
+    if (this.selectedCreateStep === 'settings') { this.selectedCreateStep = 'seo'; return; }
+    if (this.selectedCreateStep === 'seo') { this.selectedCreateStep = 'customize'; return; }
+    if (this.selectedCreateStep === 'customize') { this.selectedCreateStep = 'tickets'; return; }
+    if (this.selectedCreateStep === 'tickets') { this.selectedCreateStep = 'design'; return; }
+    if (this.selectedCreateStep === 'design') { this.selectedCreateStep = 'datetime'; return; }
+    if (this.selectedCreateStep === 'datetime') { this.selectedCreateStep = 'basic'; return; }
   }
 
   get canProceedBasic(): boolean {
+    return !!(this.title.trim() && this.resolvedCategory && this.language && this.ageRestriction);
+  }
+
+  get canProceedDateTime(): boolean {
     return !!(
-      this.title.trim() &&
-      this.resolvedCategory &&
       this.startDate &&
       this.endDate &&
       this.showTimes?.length &&
+      this.showTimes.some((time) => String(time || '').trim()) &&
       this.locationType &&
-      this.venue.trim() &&
-      this.totalSeats >= 1 &&
-      this.price >= 0
+      ((this.locationType === 'Online' && this.meetingLink.trim()) || (this.locationType !== 'Online' && this.venue.trim()))
     );
   }
 
-  get canProceedRegistration(): boolean {
-    return !!this.registrationTemplate;
+  get canProceedTickets(): boolean {
+    return !!(this.totalSeats >= 1 && this.price >= 0 && this.registrationTemplate && this.ticketMode);
   }
 
   get canProceedDesign(): boolean {
-    return !!this.designTemplate;
+    return !!(this.designTemplate && (this.selectedFile || this.existingImageUrl));
   }
 
-  get canProceedImages(): boolean {
-    return !!(this.selectedFile || this.existingImageUrl);
+  get canProceedCustomize(): boolean {
+    return true;
+  }
+
+  get canProceedSeo(): boolean {
+    return !!(this.slug.trim() || this.title.trim());
   }
 
   get canPublish(): boolean {
-    return this.canProceedBasic && this.canProceedRegistration && this.canProceedDesign && this.canProceedImages;
+    return this.canProceedBasic && this.canProceedDateTime && this.canProceedDesign && this.canProceedTickets && this.canProceedCustomize && this.canProceedSeo;
+  }
+
+  canOpenStep(step: CreateEventStep): boolean {
+    if (step === 'basic') return true;
+    if (step === 'datetime') return this.canProceedBasic;
+    if (step === 'design') return this.canProceedBasic && this.canProceedDateTime;
+    if (step === 'tickets') return this.canProceedBasic && this.canProceedDateTime && this.canProceedDesign;
+    if (step === 'customize') return this.canProceedBasic && this.canProceedDateTime && this.canProceedDesign && this.canProceedTickets;
+    if (step === 'seo') return this.canProceedBasic && this.canProceedDateTime && this.canProceedDesign && this.canProceedTickets && this.canProceedCustomize;
+    return this.canPublish;
+  }
+
+  isStepComplete(step: CreateEventStep): boolean {
+    if (step === 'basic') return this.canProceedBasic;
+    if (step === 'datetime') return this.canProceedDateTime;
+    if (step === 'design') return this.canProceedDesign;
+    if (step === 'tickets') return this.canProceedTickets;
+    if (step === 'customize') return this.canProceedCustomize;
+    if (step === 'seo') return this.canProceedSeo;
+    return this.canPublish;
+  }
+
+  get currentStepIndex(): number {
+    return this.createSteps.findIndex((step) => step.key === this.selectedCreateStep);
+  }
+
+  get completionCount(): number {
+    return this.createSteps.filter((step) => this.isStepComplete(step.key)).length;
+  }
+
+  get completionPercent(): number {
+    return Math.round((this.completionCount / this.createSteps.length) * 100);
+  }
+
+  get priceLabel(): string {
+    return Number(this.price || 0) === 0 ? 'Free' : `Rs ${this.price}`;
+  }
+
+  get imageStatusLabel(): string {
+    return this.selectedFile ? this.selectedFile.name : (this.existingImageUrl ? 'Current cover ready' : 'No cover selected');
+  }
+
+  get previewVenue(): string {
+    if (this.locationType === 'Online') return this.meetingLink || 'Online event link';
+    return this.venue || 'Venue will appear here';
+  }
+
+  get ticketSummary(): string {
+    if (this.ticketMode === 'free') return 'Free entry';
+    if (this.ticketMode === 'donation') return 'Donation based';
+    return this.priceLabel;
   }
 
   // =============================
@@ -312,7 +429,9 @@ export class CreateEventComponent implements OnInit {
     this.es.getEventById(id).subscribe({
       next: (ev: any) => {
         this.title = ev.title || '';
+        this.tagline = ev.tagline || '';
         this.description = ev.description || '';
+        this.syncEditorFromDescription();
         // Schedule (new) with fallbacks to legacy `date`
         const legacyIso = ev.date || '';
         const legacyDate = legacyIso ? new Date(legacyIso) : null;
@@ -333,14 +452,30 @@ export class CreateEventComponent implements OnInit {
         // Keep legacy date field (not shown in UI)
         this.date = legacyIso ? legacyIso.slice(0, 16) : '';
         this.venue = ev.venue || '';
+        this.meetingLink = ev.meetingLink || '';
         this.price = ev.price || 0;
         this.totalSeats = ev.totalSeats || 1;
         this.existingImageUrl = ev.imageUrl || null;
         this.applyCategory(ev.category || '');
         this.locationType = ev.locationType || '';
+        this.language = ev.language || this.language;
+        this.ageRestriction = ev.ageRestriction || this.ageRestriction;
+        this.timezone = ev.timezone || this.timezone;
+        this.isMultiDate = !!ev.isMultiDate;
+        this.mapQuery = ev.mapQuery || '';
         this.registrationTemplate = ev.registrationTemplate || this.registrationTemplate;
         this.designTemplate = ev.designTemplate || this.designTemplate;
         this.imagePreset = ev.imagePreset || this.imagePreset;
+        this.ticketMode = ev.ticketMode || this.ticketMode;
+        this.slug = ev.slug || '';
+        this.metaTitle = ev.metaTitle || '';
+        this.metaDescription = ev.metaDescription || '';
+        this.socialPreviewImage = ev.socialPreviewImage || '';
+        this.visibility = ev.visibility || this.visibility;
+        this.approvalRequired = !!ev.approvalRequired;
+        this.refundPolicy = ev.refundPolicy || '';
+        this.termsText = ev.termsText || '';
+        this.customSections = Array.isArray(ev.customSections) ? ev.customSections : [];
         this.customFields = Array.isArray(ev.customFields) ? ev.customFields : [];
         if (ev.designConfig && typeof ev.designConfig === 'object') {
           this.designConfig = {
@@ -374,7 +509,8 @@ export class CreateEventComponent implements OnInit {
 
     if (!this.title.trim()) { this.errorMessage = 'Title required'; return; }
     if (!this.resolvedCategory) { this.errorMessage = 'Category required'; return; }
-    if (!this.venue.trim()) { this.errorMessage = 'Venue required'; return; }
+    if (this.locationType === 'Online' && !this.meetingLink.trim()) { this.errorMessage = 'Meeting link required'; return; }
+    if (this.locationType !== 'Online' && !this.venue.trim()) { this.errorMessage = 'Venue required'; return; }
     if (!this.startDate) { this.errorMessage = 'Start date required'; return; }
     if (!this.endDate) { this.errorMessage = 'End date required'; return; }
     if (!this.showTimes?.length) { this.errorMessage = 'At least 1 show time required'; return; }
@@ -391,7 +527,7 @@ export class CreateEventComponent implements OnInit {
       .map((t) => String(t || '').trim())
       .filter(Boolean);
 
-    const invalidTime = times.find((t) => !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(t));
+    const invalidTime = times.find((t) => !/^([01]\d|2[0-3]):[0-5]\d$/.test(t));
     if (invalidTime) {
       this.errorMessage = `Invalid time: ${invalidTime}`;
       return;
@@ -405,19 +541,36 @@ export class CreateEventComponent implements OnInit {
 
     const fd = new FormData();
     fd.append('title', this.title.trim());
+    fd.append('tagline', this.tagline.trim());
     fd.append('description', this.description.trim());
     fd.append('date', legacyIso);
     fd.append('startDate', this.startDate);
     fd.append('endDate', this.endDate);
     fd.append('showTimes', JSON.stringify(times));
-    fd.append('venue', this.venue.trim());
+    fd.append('venue', this.locationType === 'Online' ? (this.meetingLink.trim() || this.venue.trim()) : this.venue.trim());
     fd.append('price', String(this.price));
     fd.append('totalSeats', String(this.totalSeats));
     fd.append('category', this.resolvedCategory);
     fd.append('locationType', this.locationType);
+    fd.append('meetingLink', this.meetingLink.trim());
+    fd.append('language', this.language);
+    fd.append('ageRestriction', this.ageRestriction);
+    fd.append('timezone', this.timezone);
+    fd.append('isMultiDate', String(this.isMultiDate));
+    fd.append('mapQuery', this.mapQuery.trim());
     fd.append('registrationTemplate', this.registrationTemplate);
     fd.append('designTemplate', this.designTemplate);
     fd.append('imagePreset', this.imagePreset);
+    fd.append('ticketMode', this.ticketMode);
+    fd.append('customSections', JSON.stringify(this.customSections));
+    fd.append('slug', this.resolvedSlug);
+    fd.append('metaTitle', this.metaTitle.trim());
+    fd.append('metaDescription', this.metaDescription.trim());
+    fd.append('socialPreviewImage', this.socialPreviewImage.trim());
+    fd.append('visibility', this.visibility);
+    fd.append('approvalRequired', String(this.approvalRequired));
+    fd.append('refundPolicy', this.refundPolicy.trim());
+    fd.append('termsText', this.termsText.trim());
     fd.append('designConfig', JSON.stringify(this.designConfig));
     fd.append('customFields', JSON.stringify(this.customFields));
 
@@ -566,6 +719,27 @@ export class CreateEventComponent implements OnInit {
     return this.customCategory.trim();
   }
 
+  get resolvedSlug(): string {
+    const base = this.slug.trim() || this.title.trim();
+    return base
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80);
+  }
+
+  addCustomSection() {
+    const title = this.customSectionDraft.title.trim();
+    const body = this.customSectionDraft.body.trim();
+    if (!title || !body) return;
+    this.customSections = [...this.customSections, { title, body }];
+    this.customSectionDraft = { title: '', body: '' };
+  }
+
+  removeCustomSection(index: number) {
+    this.customSections = this.customSections.filter((_, i) => i !== index);
+  }
+
   private applyCategory(value: string) {
     if (!value) {
       this.category = '';
@@ -584,12 +758,6 @@ export class CreateEventComponent implements OnInit {
   onDescriptionInput(event: Event) {
     const el = event.target as HTMLElement | null;
     if (!el) return;
-    const text = (el.textContent || '').trim();
-    if (!text) {
-      el.innerHTML = '';
-      this.description = '';
-      return;
-    }
     this.description = el.innerHTML || '';
   }
 
@@ -618,6 +786,15 @@ export class CreateEventComponent implements OnInit {
     const el = this.descEditor?.nativeElement;
     if (!el) return;
     this.description = el.innerHTML || '';
+  }
+
+  private syncEditorFromDescription() {
+    const el = this.descEditor?.nativeElement;
+    if (!el) return;
+    const next = this.description || '';
+    if (el.innerHTML !== next) {
+      el.innerHTML = next;
+    }
   }
 
   private mapFontSize(size: number): number {

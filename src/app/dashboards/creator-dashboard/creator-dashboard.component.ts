@@ -2,8 +2,12 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
+import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../auth/auth.service';
+import { PromotionRecord, PromotionService } from '../../services/promotion.service';
 
 type RangeDays = 7 | 30;
+type CreatorSection = 'overview' | 'events' | 'sales' | 'promotions';
 
 type CreatorEventRow = {
   eventId: string;
@@ -26,11 +30,12 @@ type DailyPoint = {
 @Component({
   standalone: true,
   selector: 'app-creator-dashboard',
-  imports: [CommonModule, RouterModule, DatePipe],
+  imports: [CommonModule, RouterModule, DatePipe, FormsModule],
   templateUrl: './creator-dashboard.component.html',
   styleUrls: ['./creator-dashboard.component.css']
 })
 export class CreatorDashboardComponent implements OnInit {
+  activeSection: CreatorSection = 'overview';
 
   raw: any = null;
   events: CreatorEventRow[] = [];
@@ -38,10 +43,28 @@ export class CreatorDashboardComponent implements OnInit {
 
   loading = false;
   errorMsg = '';
+  promoMsg = '';
 
   rangeDays: RangeDays = 30;
+  creatorPromotions: PromotionRecord[] = [];
+  promotionForm = {
+    title: '',
+    code: '',
+    kind: 'coupon' as 'coupon' | 'gift',
+    discountType: 'percent' as 'percent' | 'flat',
+    discountValue: 10,
+    eventId: '',
+    expiryDate: '',
+    maxClaims: 50,
+    description: '',
+  };
 
-  constructor(private dashboardService: DashboardService, private router: Router) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private router: Router,
+    private authService: AuthService,
+    private promotionService: PromotionService
+  ) {}
 
   ngOnInit() {
     this.loading = true;
@@ -50,6 +73,7 @@ export class CreatorDashboardComponent implements OnInit {
         this.raw = res;
         this.events = this.normalizeEvents(res);
         this.bookings = this.normalizeBookings(res);
+        this.refreshPromotions();
         this.loading = false;
       },
       error: (err) => {
@@ -60,8 +84,69 @@ export class CreatorDashboardComponent implements OnInit {
     });
   }
 
+  createPromotion(): void {
+    const title = this.promotionForm.title.trim();
+    const code = this.promotionForm.code.trim().toUpperCase();
+    const selectedEvent = this.events.find((item) => item.eventId === this.promotionForm.eventId);
+
+    if (!title || !code || !selectedEvent) {
+      this.promoMsg = 'Title, code, and event are required.';
+      return;
+    }
+
+    this.promotionService.createPromotion(
+      {
+        title,
+        code,
+        kind: this.promotionForm.kind,
+        scope: 'event',
+        discountType: this.promotionForm.discountType,
+        discountValue: this.promotionForm.discountValue,
+        eventId: selectedEvent.eventId,
+        eventTitle: selectedEvent.title,
+        expiryDate: this.promotionForm.expiryDate,
+        maxClaims: this.promotionForm.maxClaims,
+        description: this.promotionForm.description,
+      },
+      this.authService.getUser()
+    );
+
+    this.promoMsg = `${code} created for ${selectedEvent.title}.`;
+    this.promotionForm = {
+      title: '',
+      code: '',
+      kind: 'coupon',
+      discountType: 'percent',
+      discountValue: 10,
+      eventId: '',
+      expiryDate: '',
+      maxClaims: 50,
+      description: '',
+    };
+    this.refreshPromotions();
+  }
+
+  promotionSummary(item: PromotionRecord): string {
+    return this.promotionService.describePromotion(item);
+  }
+
+  deletePromotion(item: PromotionRecord): void {
+    if (!confirm(`Delete ${item.code}?`)) return;
+    const result = this.promotionService.deletePromotion(item.id, this.authService.getUser());
+    this.promoMsg = result.message;
+    this.refreshPromotions();
+  }
+
+  private refreshPromotions(): void {
+    this.creatorPromotions = this.promotionService.listByCreator(this.authService.getUser());
+  }
+
   setRange(days: RangeDays): void {
     this.rangeDays = days;
+  }
+
+  setActiveSection(section: CreatorSection): void {
+    this.activeSection = section;
   }
 
   // ===== KPIs =====

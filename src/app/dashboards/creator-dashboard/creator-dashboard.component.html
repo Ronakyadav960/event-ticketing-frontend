@@ -2,14 +2,21 @@
   <div class="dashboard-header">
     <div>
       <h2>Creator Dashboard</h2>
-      <p class="subtitle">Your events overview</p>
+      <p class="subtitle">Switch between overview, your events, sales, and promotions using top tabs.</p>
     </div>
   </div>
 
   <div class="error-box" *ngIf="errorMsg">{{ errorMsg }}</div>
   <div class="loading-box" *ngIf="loading">Loading dashboard...</div>
 
-  <div class="kpi-grid" *ngIf="!loading">
+  <div class="creator-tabs" *ngIf="!loading">
+    <button class="creator-tab" [class.active]="activeSection==='overview'" type="button" (click)="setActiveSection('overview')">Overview</button>
+    <button class="creator-tab" [class.active]="activeSection==='events'" type="button" (click)="setActiveSection('events')">My Events</button>
+    <button class="creator-tab" [class.active]="activeSection==='sales'" type="button" (click)="setActiveSection('sales')">Sales</button>
+    <button class="creator-tab" [class.active]="activeSection==='promotions'" type="button" (click)="setActiveSection('promotions')">Promotions</button>
+  </div>
+
+  <div class="kpi-grid" *ngIf="!loading && activeSection==='overview'">
     <div class="kpi-card">
       <div class="kpi-label">My Events</div>
       <div class="kpi-value">{{ myEventsCount }}</div>
@@ -32,7 +39,104 @@
     </div>
   </div>
 
-  <div class="charts-grid" *ngIf="!loading">
+  <div class="promo-layout" *ngIf="!loading && activeSection==='promotions'">
+    <div class="promo-builder card-shell">
+      <div class="section-head">
+        <div>
+          <h3>Gift & Coupon Builder</h3>
+          <p>Create event-specific offers your users can claim and apply while booking.</p>
+        </div>
+      </div>
+
+      <div class="promo-msg" *ngIf="promoMsg">{{ promoMsg }}</div>
+
+      <div class="promo-form-grid">
+        <label class="field">
+          <span>Offer Title</span>
+          <input [(ngModel)]="promotionForm.title" placeholder="Student Night Deal" />
+        </label>
+
+        <label class="field">
+          <span>Code</span>
+          <input [(ngModel)]="promotionForm.code" placeholder="STUDENT10" />
+        </label>
+
+        <label class="field">
+          <span>Type</span>
+          <select [(ngModel)]="promotionForm.kind">
+            <option value="coupon">Coupon</option>
+            <option value="gift">Gift Card</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Discount Mode</span>
+          <select [(ngModel)]="promotionForm.discountType">
+            <option value="percent">Percent</option>
+            <option value="flat">Flat Amount</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Discount Value</span>
+          <input type="number" min="1" [(ngModel)]="promotionForm.discountValue" />
+        </label>
+
+        <label class="field">
+          <span>Event</span>
+          <select [(ngModel)]="promotionForm.eventId">
+            <option value="">Select event</option>
+            <option *ngFor="let e of events" [value]="e.eventId">{{ e.title }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Expiry Date</span>
+          <input type="date" [(ngModel)]="promotionForm.expiryDate" />
+        </label>
+
+        <label class="field">
+          <span>Max Claims</span>
+          <input type="number" min="1" [(ngModel)]="promotionForm.maxClaims" />
+        </label>
+      </div>
+
+      <label class="field full">
+        <span>Description</span>
+        <textarea rows="3" [(ngModel)]="promotionForm.description" placeholder="Visible inside hamburger menu and booking panel"></textarea>
+      </label>
+
+      <button class="btn create-offer" type="button" (click)="createPromotion()">Create Offer</button>
+    </div>
+
+    <div class="promo-list card-shell">
+      <div class="section-head">
+        <div>
+          <h3>Created Offers</h3>
+          <p>These offers appear in user claims and on the booking modal.</p>
+        </div>
+      </div>
+
+      <div class="promo-item" *ngFor="let item of creatorPromotions">
+        <div class="promo-item-top">
+          <span class="promo-kind">{{ item.kind }}</span>
+          <span class="promo-code">{{ item.code }}</span>
+        </div>
+        <div class="promo-name">{{ item.title }}</div>
+        <div class="promo-desc">{{ promotionSummary(item) }}</div>
+        <div class="promo-desc" *ngIf="item.expiryDate">Expires {{ item.expiryDate | date:'mediumDate' }}</div>
+        <div class="promo-actions">
+          <button class="btn small danger" type="button" (click)="deletePromotion(item)">Delete</button>
+        </div>
+      </div>
+
+      <div class="empty-offers" *ngIf="creatorPromotions.length === 0">
+        No offers created yet.
+      </div>
+    </div>
+  </div>
+
+  <div class="charts-grid" *ngIf="!loading && (activeSection==='overview' || activeSection==='sales')">
     <div class="chart-card">
       <div class="chart-head">
         <div class="chart-title">Bookings (last {{ rangeDays }} days)</div>
@@ -62,7 +166,7 @@
     </div>
   </div>
 
-  <div class="bars-grid" *ngIf="!loading">
+  <div class="bars-grid" *ngIf="!loading && activeSection==='sales'">
     <div class="bar-card">
       <div class="bar-title">Top 5 events by tickets sold</div>
       <div class="bar-row" *ngFor="let e of top5ByTickets">
@@ -86,7 +190,7 @@
     </div>
   </div>
 
-  <div class="table-card" *ngIf="!loading">
+  <div class="table-card" *ngIf="!loading && activeSection==='events'">
     <div class="table-head">
       <div class="table-title">My Events</div>
     </div>
