@@ -1,0 +1,70 @@
+<section class="movie-detail-page">
+  <div class="state-card" *ngIf="loading">Loading movie details...</div>
+  <div class="state-card error" *ngIf="!loading && error">{{ error }}</div>
+
+  <ng-container *ngIf="!loading && movie">
+    <section class="hero-card">
+      <div class="movie-poster" [ngStyle]="posterStyle(movie)">
+        <span *ngIf="!movie.posterUrl">Poster</span>
+      </div>
+
+      <div class="movie-copy">
+        <p class="eyebrow">Movie Details</p>
+        <h1>{{ movie.title }}</h1>
+        <div class="meta-row">
+          <span>{{ movie.releaseDate || 'Release TBA' }}</span>
+          <span>Rating {{ movie.voteAverage || 0 }}</span>
+          <span>Popularity {{ movie.popularity || 0 }}</span>
+        </div>
+        <p class="overview">{{ movie.overview || 'Movie overview yahan dataset se show hoga.' }}</p>
+      </div>
+    </section>
+
+    <section class="shows-section">
+      <div class="section-head">
+        <p class="eyebrow">Book Tickets</p>
+        <h2>Matching Events / Shows</h2>
+      </div>
+
+      <div class="state-card" *ngIf="eventsLoading">Loading matching shows...</div>
+      <div class="state-card error" *ngIf="!eventsLoading && eventsError">{{ eventsError }}</div>
+      <div class="state-card" *ngIf="!eventsLoading && !eventsError && !relatedEvents.length">
+        Abhi is movie ke naam se koi event match nahi hua. Jaise hi matching event create hoga, booking yahin se ho jayegi.
+      </div>
+
+      <div class="event-grid" *ngIf="relatedEvents.length">
+        <article class="event-card" *ngFor="let event of relatedEvents">
+          <div>
+            <h3>{{ event.title }}</h3>
+            <p>{{ event.venue || 'Venue TBA' }}</p>
+            <p>{{ event.date | date:'mediumDate' }} | {{ event.date | date:'shortTime' }}</p>
+          </div>
+          <button type="button" (click)="openEvent(event)">Open & Book</button>
+        </article>
+      </div>
+    </section>
+
+    <section class="recommendation-section" *ngIf="recommendations.length">
+      <div class="section-head">
+        <p class="eyebrow">Recommended Movies</p>
+        <h2>Because you opened {{ movie.title }}</h2>
+      </div>
+
+      <div class="recommendation-grid">
+        <a
+          class="recommendation-card"
+          *ngFor="let item of recommendations; trackBy: trackMovie"
+          [routerLink]="['/movies', item.movieId]"
+        >
+          <div class="recommendation-poster" [ngStyle]="posterStyle(item)">
+            <span *ngIf="!item.posterUrl">Poster</span>
+          </div>
+          <div>
+            <strong>{{ item.title }}</strong>
+            <span>{{ item.releaseDate || 'TBA' }}</span>
+          </div>
+        </a>
+      </div>
+    </section>
+  </ng-container>
+</section>

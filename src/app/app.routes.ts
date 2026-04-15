@@ -11,6 +11,8 @@ import { CreateEventComponent } from './pages/create-event/create-event.componen
 import { BookingConfirmationComponent } from './pages/booking-confirmation/booking-confirmation.component';
 import { BookingHistoryComponent } from './pages/booking-history/booking-history.component';
 import { PromotionsComponent } from './pages/promotions/promotions.component';
+import { MovieRecommendationsComponent } from './pages/movie-recommendations/movie-recommendations.component';
+import { MovieDetailsComponent } from './pages/movie-details/movie-details.component';
 
 import { PaymentSuccessComponent } from './pages/payment-success/payment-success.component';
 import { PaymentCancelComponent } from './pages/payment-cancel/payment-cancel.component';
@@ -26,6 +28,9 @@ export const routes: Routes = [
 
   // ---------- USER ----------
   { path: 'events', component: EventsComponent },
+  { path: 'movies', component: MovieRecommendationsComponent },
+  { path: 'movies/search', component: MovieRecommendationsComponent },
+  { path: 'movies/:movieId', component: MovieDetailsComponent },
   { path: 'events/:id', component: EventDetailsComponent, canActivate: [authGuard] },
   { path: 'history', component: BookingHistoryComponent, canActivate: [authGuard] },
   { path: 'gifts', component: PromotionsComponent, canActivate: [authGuard], data: { kind: 'gift' } },

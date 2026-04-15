@@ -13,25 +13,6 @@
     <div class="logo" routerLink="/events">
       Event Booking
     </div>
-
-    <div class="nav-search" *ngIf="!isLoginPage && !isRegisterPage && isEventsPage">
-      <input
-        class="nav-search-input"
-        type="search"
-        placeholder="Search events..."
-        [(ngModel)]="navbarQuery"
-        (ngModelChange)="onNavbarQueryChange($event)"
-      />
-      <button
-        class="nav-search-clear"
-        type="button"
-        *ngIf="navbarQuery"
-        (click)="clearNavbarSearch()"
-        aria-label="Clear search"
-      >
-        ×
-      </button>
-    </div>
   </div>
 
   <div class="nav-links">
@@ -83,6 +64,7 @@
       History
     </a>
 
+    
     <a
       class="drawer-link"
       routerLink="/gifts"

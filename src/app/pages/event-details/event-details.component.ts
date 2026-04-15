@@ -1,4 +1,4 @@
-// src/app/pages/event-details/event-details.component.ts ✅ UPDATED (Stripe redirect + safer booking)
+// src/app/pages/event-details/event-details.component.ts âœ… UPDATED (Stripe redirect + safer booking)
 
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -11,6 +11,8 @@ import { EventService } from '../../services/event.service';
 import { BookingService } from '../../services/booking.service';
 import { AuthService } from '../../auth/auth.service';
 import { PromotionRecord, PromotionService } from '../../services/promotion.service';
+import { MovieService } from '../../services/movie.service';
+import { MovieRecommendationItem } from '../../models/movie.model';
 
 @Component({
   standalone: true,
@@ -26,6 +28,7 @@ export class EventDetailsComponent implements OnInit {
   private bs = inject(BookingService);
   private authService = inject(AuthService);
   private promotionService = inject(PromotionService);
+  private movieService = inject(MovieService);
   private cdr = inject(ChangeDetectorRef);
 
   loading = true;
@@ -54,6 +57,9 @@ export class EventDetailsComponent implements OnInit {
   selectedPromotionId = '';
 
   eventImgFailed = false;
+  movieRecommendations: MovieRecommendationItem[] = [];
+  movieRecommendationLoading = false;
+  movieRecommendationError = '';
 
   private BASE = environment.apiUrl;
   bgStyle: Record<string, string> = {};
@@ -374,6 +380,7 @@ export class EventDetailsComponent implements OnInit {
         const full = this.es.getEventImageUrl(ev);
 
         this.bgStyle = full ? { 'background-image': `url('${full}')` } : {};
+        this.loadMovieRecommendations(String(ev?.title || ''));
 
         this.loading = false;
         this.cdr.detectChanges();
@@ -404,7 +411,7 @@ export class EventDetailsComponent implements OnInit {
 
   book(): void {
     if (!this.event) return;
-    if (this.submitting) return; // ✅ prevent double clicks
+    if (this.submitting) return; // âœ… prevent double clicks
 
     const eventId = this.event._id || this.event.id;
     if (!eventId) {
@@ -414,36 +421,36 @@ export class EventDetailsComponent implements OnInit {
 
     const qty = Number(this.seats);
     if (!Number.isInteger(qty) || qty < 1) {
-      this.msg = '❌ Seats must be at least 1.';
+      this.msg = 'âŒ Seats must be at least 1.';
       return;
     }
 
     if (!this.name.trim() || !this.email.trim()) {
-      this.msg = '❌ Name and Email are required.';
+      this.msg = 'âŒ Name and Email are required.';
       return;
     }
 
     if (this.isStandard && !this.phone.trim()) {
-      this.msg = '❌ Phone is required for standard registration.';
+      this.msg = 'âŒ Phone is required for standard registration.';
       return;
     }
     if (this.isWorkshop && (!this.experience.trim() || !this.skillLevel)) {
-      this.msg = '❌ Experience and skill level are required for workshop registration.';
+      this.msg = 'âŒ Experience and skill level are required for workshop registration.';
       return;
     }
     if (this.isSeminar && (!this.company.trim() || !this.designation.trim())) {
-      this.msg = '❌ Company and designation are required for seminar registration.';
+      this.msg = 'âŒ Company and designation are required for seminar registration.';
       return;
     }
 
     if (!this.validateCustomFields()) {
-      this.msg = '❌ Please complete all required custom fields.';
+      this.msg = 'âŒ Please complete all required custom fields.';
       return;
     }
 
     const showAtIso = this.buildShowAtIso();
     if (!showAtIso) {
-      this.msg = '❌ Please select show date and time.';
+      this.msg = 'âŒ Please select show date and time.';
       return;
     }
 
@@ -564,5 +571,59 @@ export class EventDetailsComponent implements OnInit {
       }
     }
     return true;
+  }
+
+  private loadMovieRecommendations(title: string): void {
+    const query = title.trim();
+    if (!query) {
+      this.movieRecommendations = [];
+      this.movieRecommendationError = '';
+      this.movieRecommendationLoading = false;
+      return;
+    }
+
+    this.movieRecommendationLoading = true;
+    this.movieRecommendationError = '';
+    this.movieRecommendations = [];
+
+    this.movieService.getRecommendations(query, 8).subscribe({
+      next: (response) => {
+        this.movieRecommendationLoading = false;
+        this.movieRecommendations = Array.isArray(response.recommendations)
+          ? response.recommendations
+          : [];
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.movieRecommendationLoading = false;
+        this.movieRecommendations = [];
+        this.movieRecommendationError =
+          'Movie recommendations will appear here once the event title matches the movie dataset.';
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  moviePosterStyle(movie: MovieRecommendationItem): Record<string, string> {
+    return movie.posterUrl ? { 'background-image': `url('${movie.posterUrl}')` } : {};
+  }
+
+  openRecommendedMovie(movie: MovieRecommendationItem): void {
+    const movieId = String(movie?.movieId || '').trim();
+    if (!movieId) return;
+
+    this.es.getMovieEvent(movieId).subscribe({
+      next: (event) => {
+        const eventId = event?._id || event?.id;
+        if (eventId) {
+          this.router.navigate(['/events', eventId]);
+          return;
+        }
+        this.router.navigate(['/movies', movieId]);
+      },
+      error: () => {
+        this.router.navigate(['/movies', movieId]);
+      },
+    });
   }
 }

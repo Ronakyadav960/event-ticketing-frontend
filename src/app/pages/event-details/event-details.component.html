@@ -57,7 +57,7 @@
                     <div class="side-price">{{ bookingPriceLabel }}</div>
                   </div>
                   <div class="side-copy">{{ event?.venue || 'Venue details will appear here.' }}</div>
-                  <div class="side-copy">{{ formattedEventDate }} · {{ formattedEventTime }}</div>
+                  <div class="side-copy">{{ formattedEventDate }} Â· {{ formattedEventTime }}</div>
 
                   <div class="quick-select-block" *ngIf="showDateOptions.length">
                     <div class="quick-select-title">Choose Date</div>
@@ -104,7 +104,7 @@
                 </article>
                 <article class="info-band-card">
                   <div class="info-band-title">Schedule</div>
-                  <p>{{ formattedEventDate }} · {{ formattedEventTime }}</p>
+                  <p>{{ formattedEventDate }} Â· {{ formattedEventTime }}</p>
                 </article>
                 <article class="info-band-card">
                   <div class="info-band-title">Venue</div>
@@ -114,6 +114,39 @@
                   <div class="info-band-title">Booking</div>
                   <p>{{ bookingAssistText }}</p>
                 </article>
+              </section>
+
+              <section class="movie-recommendation-band">
+                <div class="movie-band-header">
+                  <div>
+                    <div class="info-band-title">Recommended Movies For You</div>
+                    <h3 class="movie-band-title">{{ event.title }}</h3>
+                  </div>
+                  <a class="movie-band-link" routerLink="/movies/search" [queryParams]="{ title: event.title }">
+                    Open full view
+                  </a>
+                </div>
+
+                <div class="movie-band-state" *ngIf="movieRecommendationLoading">
+                  Loading movie recommendations...
+                </div>
+
+                <div class="movie-band-state" *ngIf="!movieRecommendationLoading && movieRecommendationError">
+                  {{ movieRecommendationError }}
+                </div>
+
+                <div class="movie-strip" *ngIf="!movieRecommendationLoading && movieRecommendations.length">
+                  <article class="movie-mini-card" *ngFor="let movie of movieRecommendations" (click)="openRecommendedMovie(movie)">
+                    <div class="movie-mini-poster" [ngStyle]="moviePosterStyle(movie)">
+                      <span *ngIf="!movie.posterUrl">Poster</span>
+                    </div>
+                    <div class="movie-mini-copy">
+                      <strong>{{ movie.title }}</strong>
+                      <span>{{ movie.releaseDate || 'Release TBA' }}</span>
+                      <span>Rating {{ movie.voteAverage || 0 }}</span>
+                    </div>
+                  </article>
+                </div>
               </section>
             </div>
 
@@ -140,7 +173,7 @@
                     <div class="ticket-card">
                       <div class="kicker">Now Showing</div>
                       <h2 class="title">{{ event.title }}</h2>
-                      <div class="meta-line">{{ event.date | date: 'fullDate' }} · {{ event.date | date: 'shortTime' }}</div>
+                      <div class="meta-line">{{ event.date | date: 'fullDate' }} Â· {{ event.date | date: 'shortTime' }}</div>
                       <div class="meta-line">{{ event.venue || '-' }}</div>
                       <div class="price-row">From Rs {{ event.price ?? 0 }}</div>
                       <button class="btn primary" type="button" (click)="openBooking()">{{ designConfig?.badgeText || 'Book Now' }}</button>
@@ -155,7 +188,7 @@
                     <div class="concert-content">
                       <div class="kicker glow">{{ designConfig?.heroKicker || 'Live Concert' }}</div>
                       <h2 class="title">{{ event.title }}</h2>
-                      <div class="meta-line">{{ event.date | date: 'fullDate' }} · {{ event.date | date: 'shortTime' }}</div>
+                      <div class="meta-line">{{ event.date | date: 'fullDate' }} Â· {{ event.date | date: 'shortTime' }}</div>
                       <div class="meta-line">{{ event.venue || '-' }}</div>
                       <div class="price-row">Rs {{ event.price ?? 0 }}</div>
                       <button class="btn primary" type="button" (click)="openBooking()">{{ designConfig?.ctaText || 'Get Tickets' }}</button>
@@ -175,7 +208,7 @@
                     <div class="comedy-left">
                       <div class="kicker">Comedy Night</div>
                       <h2 class="title">{{ event.title }}</h2>
-                      <div class="meta-line">{{ event.date | date: 'fullDate' }} · {{ event.date | date: 'shortTime' }}</div>
+                      <div class="meta-line">{{ event.date | date: 'fullDate' }} Â· {{ event.date | date: 'shortTime' }}</div>
                       <div class="meta-line">{{ event.venue || '-' }}</div>
                       <div class="price-row">Rs {{ event.price ?? 0 }}</div>
                       <div class="desc" [innerHTML]="event.description || 'No description yet.'"></div>

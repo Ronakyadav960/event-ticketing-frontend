@@ -5,8 +5,20 @@
     <div class="hero-inner">
       <div class="hero-left">
         <h1>Book Your Next Event</h1>
-       <!--   <div class="hero-sub">Find events and book tickets instantly.</div>-->
-        <div class="category-row">
+        <p class="hero-copy">
+        </p>
+        <div class="searchbar">
+          <input
+            class="search"
+            type="text"
+            [ngModel]="q"
+            (ngModelChange)="onSearchChange($event)"
+            placeholder="Search event ya movie title..."
+          />
+        </div>
+        <div class="category-block">
+          <div class="category-label">Event Categories</div>
+       <div class="category-row">
           <button class="chip-btn" [class.active]="categoryFilter==='all'" (click)="selectCategory('all')">All</button>
           <button
             class="chip-btn"
@@ -16,6 +28,7 @@
           >
             {{ c }}
           </button>
+        </div>
         </div>
       </div>
     </div>
@@ -29,6 +42,141 @@
   <!-- State -->
   <div *ngIf="loading" class="state">Loading events...</div>
   <div *ngIf="!loading && error" class="state error">Error: {{ error }}</div>
+
+  <section class="movie-discovery" *ngIf="movieSearchActive">
+    <div class="movie-discovery-header">
+      <div>
+        <p class="movie-kicker">Movie Search</p>
+        <h2>Results for "{{ q.trim() }}"</h2>
+      </div>
+    </div>
+
+    <div class="movie-state error" *ngIf="searchError">
+      {{ searchError }}
+    </div>
+
+    <div class="match-note" *ngIf="!recommendationLoading && closestMatchNote">
+      {{ closestMatchNote }}
+    </div>
+
+    <div class="movie-state" *ngIf="recommendationLoading">Loading movie recommendations...</div>
+    <div class="movie-state error" *ngIf="!recommendationLoading && recommendationError">
+      {{ recommendationError }}
+    </div>
+
+    <article class="selected-movie-card" *ngIf="!recommendationLoading && selectedMovie">
+      <div class="movie-poster large" [ngStyle]="moviePosterStyle(selectedMovie)">
+        <span *ngIf="!selectedMovie.posterUrl">Poster</span>
+      </div>
+      <div class="movie-copy-block">
+        <p class="movie-kicker">Searched Movie</p>
+        <h3>{{ selectedMovie.title }}</h3>
+        <div class="movie-meta">
+          <span>{{ selectedMovie.releaseDate || 'Release TBA' }}</span>
+          <span>Rating {{ selectedMovie.voteAverage || 0 }}</span>
+        </div>
+        <p>{{ selectedMovie.overview || 'Movie overview dataset se yahan show hoga.' }}</p>
+        <button class="detail-btn" type="button" (click)="openMovie(selectedMovie)">Open Details</button>
+      </div>
+    </article>
+
+    <div class="movie-discovery-header matching-events-head" *ngIf="!recommendationLoading && selectedMovie">
+      <div>
+        <p class="movie-kicker">Created Events</p>
+        <h2>Matching Events For "{{ selectedMovie.title }}"</h2>
+      </div>
+    </div>
+
+    <div class="movie-state" *ngIf="matchedEventsLoading">Loading matching events...</div>
+    <div class="movie-state error" *ngIf="!matchedEventsLoading && matchedEventsError">
+      {{ matchedEventsError }}
+    </div>
+
+    <div class="event-match-grid" *ngIf="!matchedEventsLoading && matchedEvents.length">
+      <article class="event-match-card" *ngFor="let event of matchedEvents" (click)="openEvent(event)">
+        <div class="event-match-poster">
+          <img *ngIf="shouldShowImg(event); else eventNoImg" [src]="imgUrl(event)" (error)="onImgError(event)" alt="poster" />
+          <ng-template #eventNoImg>
+            <div class="noimg">No Image</div>
+          </ng-template>
+        </div>
+        <div class="event-match-copy">
+          <h3>{{ event.title }}</h3>
+          <div class="movie-meta">
+            <span>{{ event.venue || 'Venue TBA' }}</span>
+            <span>{{ event.date | date:'mediumDate' }}</span>
+          </div>
+          <p>{{ event.description || 'This event is available for booking now.' }}</p>
+          <button class="detail-btn" type="button" (click)="$event.stopPropagation(); openEvent(event)">View Event</button>
+        </div>
+      </article>
+    </div>
+
+    <div class="movie-state" *ngIf="!matchedEventsLoading && !matchedEventsError && selectedMovie && !matchedEvents.length">
+      Is movie ke liye abhi koi created event match nahi hua.
+    </div>
+
+    <div class="movie-discovery-header matching-events-head" *ngIf="!recommendationLoading && movieRecommendations.length">
+      <div>
+        <p class="movie-kicker">Recommended Movies</p>
+        <h2>More Movies Like "{{ selectedMovie?.title }}"</h2>
+      </div>
+    </div>
+
+    <div class="movie-grid" *ngIf="!recommendationLoading && movieRecommendations.length">
+      <article class="movie-card" *ngFor="let movie of movieRecommendations; trackBy: trackMovie">
+        <div class="movie-poster" [ngStyle]="moviePosterStyle(movie)">
+          <span *ngIf="!movie.posterUrl">Poster</span>
+        </div>
+        <div class="movie-copy-block">
+          <h3>{{ movie.title }}</h3>
+          <div class="movie-meta">
+            <span>{{ movie.releaseDate || 'Release TBA' }}</span>
+            <span>Rating {{ movie.voteAverage || 0 }}</span>
+          </div>
+          <p>{{ movie.overview || 'Movie overview dataset .' }}</p>
+          <button class="detail-btn" type="button" (click)="openMovie(movie)">Open Details</button>
+        </div>
+      </article>
+    </div>
+
+    <div class="suggestion-row" *ngIf="!recommendationLoading && quickMatches.length">
+      <button type="button" *ngFor="let movie of quickMatches; trackBy: trackMovie" (click)="openMovie(movie)">
+        {{ movie.title }}
+      </button>
+    </div>
+  </section>
+
+  <section class="movie-discovery" *ngIf="!movieSearchActive && categoryFilter === 'all'">
+    <div class="movie-discovery-header">
+      <div>
+        <p class="movie-kicker">Movie Catalog</p>
+      </div>
+    </div>
+
+    <div class="movie-state" *ngIf="movieListLoading">Loading movies...</div>
+    <div class="movie-state error" *ngIf="!movieListLoading && movieListError">{{ movieListError }}</div>
+
+    <div class="movie-grid" *ngIf="!movieListLoading && movies.length">
+      <article class="movie-card" *ngFor="let movie of movies; trackBy: trackMovie">
+        <div class="movie-poster" [ngStyle]="moviePosterStyle(movie)">
+          <span *ngIf="!movie.posterUrl">Poster</span>
+        </div>
+        <div class="movie-copy-block">
+          <h3>{{ movie.title }}</h3>
+          <div class="movie-meta">
+            <span>{{ movie.releaseDate || 'Release TBA' }}</span>
+            <span>Rating {{ movie.voteAverage || 0 }}</span>
+          </div>
+          <p>{{ movie.overview || 'Movie overview dataset se yahan show hoga.' }}</p>
+          <button class="detail-btn" type="button" (click)="openMovie(movie)">Open Details</button>
+        </div>
+      </article>
+    </div>
+
+    <div class="movie-state" *ngIf="movieListLoadingMore">Loading more movies...</div>
+    <div *ngIf="movieHasMore && !movieListLoading" #movieSentinel class="infinite-sentinel"></div>
+  </section>
 
   <!-- Grid -->
   <section class="grid" *ngIf="!loading">
@@ -84,11 +232,5 @@
   
 
 </div>     
-
-
-
-
-
-
 
 

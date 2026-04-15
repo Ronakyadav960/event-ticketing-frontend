@@ -58,8 +58,8 @@ export class CreateEventComponent implements OnInit, AfterViewInit {
   categories: string[] = [];
   private readonly defaultCategories = ['Conference', 'Workshop', 'Seminar', 'Concert', 'Webinar', 'Movie', 'Comedy', 'Sports'];
   readonly fontOptions = ['Space Grotesk', 'Georgia', 'Courier New', 'Arial'];
-  readonly fontSizes = [12, 14, 16, 18, 20, 24, 28];
-  selectedFont = 'Space Grotesk';
+  readonly fontSizes = [10,12, 14, 16, 18, 20, 24, 28];
+  selectedFont = 'Arial';
   selectedFontSize = 16;
   selectedColor = '#e5e7eb';
   designConfig = {
@@ -120,6 +120,10 @@ export class CreateEventComponent implements OnInit, AfterViewInit {
   private readonly maxImageBytes = 5 * 1024 * 1024;
   private readonly imageWidth = 1200;
   private readonly imageHeight = 800;
+
+  private get dashboardRoute(): string {
+    return this.auth.isSuperAdmin() ? '/superadmin-dashboard' : '/creator-dashboard';
+  }
 
   // =============================
   // INIT
@@ -585,7 +589,7 @@ export class CreateEventComponent implements OnInit, AfterViewInit {
       this.es.updateEvent(this.eventId, fd).subscribe({
         next: () => {
           this.successMessage = 'Event Updated Successfully';
-          setTimeout(() => this.router.navigate(['/dashboard']), 800);
+          setTimeout(() => this.router.navigate([this.dashboardRoute]), 800);
         },
         error: err => {
           this.errorMessage = err?.error?.message || 'Update failed';
@@ -598,7 +602,7 @@ export class CreateEventComponent implements OnInit, AfterViewInit {
       this.es.createEvent(fd).subscribe({
         next: () => {
           this.successMessage = 'Event Created Successfully';
-          setTimeout(() => this.router.navigate(['/dashboard']), 800);
+          setTimeout(() => this.router.navigate([this.dashboardRoute]), 800);
         },
         error: err => {
           this.errorMessage = err?.error?.message || 'Create failed';

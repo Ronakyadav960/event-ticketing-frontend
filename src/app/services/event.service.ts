@@ -1,7 +1,8 @@
 // services/event.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, forkJoin, map, of, switchMap } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
 import { Event } from '../models/event.model';
 import { environment } from '../../environments/environment';
 
@@ -12,6 +13,10 @@ export class EventService {
 
   // ✅ Single API (role handled in backend middleware)
   private API = `${environment.apiUrl}/api/events`;
+  private tmdbApiKey = String(environment.tmdbApiKey || '').trim();
+  private tmdbImageBaseUrl = String(environment.tmdbImageBaseUrl || 'https://image.tmdb.org/t/p/w500').replace(/\/+$/, '');
+  private readonly posterLookupTimeoutMs = 2500;
+  private moviePosterCache = new Map<string, string>();
 
   constructor(private http: HttpClient) {}
 
@@ -71,10 +76,74 @@ export class EventService {
     } as Event;
   }
 
+  private enrichEventPoster(event: Event | null): Observable<Event | null> {
+    if (!event) return of(event);
+
+    const existingImage = this.normalizeImageUrl((event as any)?.imageUrl);
+    if (existingImage) {
+      return of({ ...(event as any), imageUrl: existingImage } as Event);
+    }
+
+    const movieMeta = (event as any)?.movieMeta || {};
+    const cachedUrl = this.normalizeImageUrl(movieMeta?.posterUrl);
+    if (cachedUrl) {
+      return of({
+        ...(event as any),
+        imageUrl: cachedUrl,
+        movieMeta: { ...movieMeta, posterUrl: cachedUrl },
+      } as Event);
+    }
+
+    const movieId = String((event as any)?.sourceMovieId || '').trim();
+    if (!movieId || !this.tmdbApiKey) {
+      return of(event);
+    }
+
+    const fromCache = this.moviePosterCache.get(movieId);
+    if (fromCache) {
+      return of({
+        ...(event as any),
+        imageUrl: fromCache,
+        movieMeta: { ...movieMeta, posterUrl: fromCache },
+      } as Event);
+    }
+
+    const params = new HttpParams().set('api_key', this.tmdbApiKey);
+    return this.http.get<any>(`https://api.themoviedb.org/3/movie/${encodeURIComponent(movieId)}`, { params }).pipe(
+      timeout(this.posterLookupTimeoutMs),
+      map((response) => {
+        const posterPath = String(response?.poster_path || '').trim();
+        const posterUrl = posterPath ? `${this.tmdbImageBaseUrl}/${posterPath.replace(/^\/+/, '')}` : '';
+        if (posterUrl) this.moviePosterCache.set(movieId, posterUrl);
+
+        return {
+          ...(event as any),
+          imageUrl: posterUrl || existingImage,
+          movieMeta: {
+            ...movieMeta,
+            posterPath: posterPath || movieMeta?.posterPath || '',
+            posterUrl: posterUrl || movieMeta?.posterUrl || '',
+            releaseDate: movieMeta?.releaseDate || String(response?.release_date || ''),
+            voteAverage: movieMeta?.voteAverage || Number(response?.vote_average || 0),
+            popularity: movieMeta?.popularity || Number(response?.popularity || 0),
+          },
+        } as Event;
+      }),
+      catchError(() => of(event))
+    );
+  }
+
+  private enrichEventPosters(events: Event[]): Observable<Event[]> {
+    if (!events.length) return of([]);
+    return forkJoin(events.map((event) => this.enrichEventPoster(event))).pipe(
+      map((items) => items.filter((item): item is Event => !!item))
+    );
+  }
+
   // =========================
   // PUBLIC ROUTES
   // =========================
-  getAllEvents(category?: string, page?: number, limit?: number): Observable<{
+  getAllEvents(category?: string, page?: number, limit?: number, query?: string, sourceMovieId?: string): Observable<{
     data: Event[];
     page: number;
     limit: number;
@@ -85,6 +154,8 @@ export class EventService {
     if (category) params = params.set('category', category);
     if (page) params = params.set('page', String(page));
     if (limit) params = params.set('limit', String(limit));
+    if (query?.trim()) params = params.set('q', query.trim());
+    if (sourceMovieId?.trim()) params = params.set('sourceMovieId', sourceMovieId.trim());
 
     return this.http.get<any>(this.API, { params }).pipe(
       map(res => {
@@ -115,13 +186,33 @@ export class EventService {
           total: Number(res?.total) || data.length,
           totalPages: Number(res?.totalPages) || 1,
         };
-      })
+      }),
+      switchMap((response) =>
+        this.enrichEventPosters(response.data).pipe(
+          map((data) => ({ ...response, data }))
+        )
+      )
     );
   }
+
+  getMovieEvent(sourceMovieId: string): Observable<Event | null> {
+    const normalizedId = String(sourceMovieId || '').trim();
+    if (!normalizedId) return of(null);
+
+    return this.http.get<any>(`${this.API}/movie-source/${encodeURIComponent(normalizedId)}`).pipe(
+      map((res) => this.normalizeEvent(res)),
+      switchMap((event) => this.enrichEventPoster(event)),
+      catchError(() => of(null))
+    );
+  }
+
   getEventById(id: string): Observable<Event> {
     return this.http
       .get<any>(`${this.API}/${id}`)
-      .pipe(map(res => this.normalizeEvent(res)));
+      .pipe(
+        map(res => this.normalizeEvent(res)),
+        switchMap((event) => this.enrichEventPoster(event) as Observable<Event>)
+      );
   }
 
   // =========================

@@ -1,0 +1,127 @@
+<section class="movie-page">
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-left">
+        <p class="eyebrow">Movie Discovery</p>
+        <h1>Search one movie, then get recommended movies for you.</h1>
+        <p class="hero-text"></p>
+        <form class="searchbar" (ngSubmit)="submitSearch()">
+        <input
+          class="search"
+          id="movie-search"
+          name="movie-search"
+          type="text"
+          [(ngModel)]="query"
+          (ngModelChange)="onQueryChange($event)"
+          placeholder="Try Avatar, Spectre, Batman Begins..."
+        />
+          <button type="submit">Search</button>
+        </form>
+        <div class="movie-category-block">
+          <div class="movie-category-label">Movie Categories</div>
+        <div class="movie-category-row">
+          <button
+            type="button"
+            class="movie-category-chip"
+            *ngFor="let category of movieCategories"
+            [class.active]="selectedCategory === category"
+            (click)="selectCategory(category)"
+          >
+            {{ category }}
+          </button>
+        </div>
+        </div>
+        <p class="helper-copy">{{ helperText }}</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="state-card" *ngIf="loading">Loading recommendations...</div>
+  <div class="state-card error" *ngIf="!loading && searchError">{{ searchError }}</div>
+  <div class="match-pill" *ngIf="!loading && closestMatchNote">{{ closestMatchNote }}</div>
+  <div class="state-card" *ngIf="!loading && !searchError && emptyState">{{ emptyState }}</div>
+
+  <section class="results-section" *ngIf="!loading && !selectedMovie && categoryMovies.length">
+    <div class="section-head">
+      <p class="section-kicker">Movie Categories</p>
+      <h2>{{ selectedCategory === 'All' ? 'Popular Movies' : selectedCategory + ' Movies' }}</h2>
+    </div>
+
+    <div class="results-grid">
+      <article class="movie-card" *ngFor="let movie of categoryMovies; trackBy: trackMovie">
+        <div class="poster-shell" [ngStyle]="posterStyle(movie)">
+          <span *ngIf="!movie.posterUrl">Poster</span>
+        </div>
+
+        <div class="movie-copy">
+          <div class="movie-chip">{{ movie.discoveryCategory || 'Drama' }}</div>
+          <h3>{{ movie.title }}</h3>
+          <div class="meta-row">
+            <span>{{ movie.releaseDate || 'TBA' }}</span>
+            <span>Rating {{ movie.voteAverage || 0 }}</span>
+          </div>
+          <p>{{ movie.overview || 'Overview will appear here from the dataset.' }}</p>
+          <button type="button" (click)="openMovie(movie)">Open Details</button>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="selected-movie" *ngIf="selectedMovie && !loading">
+    <div class="section-head">
+      <p class="section-kicker">Selected Movie</p>
+      <h2>{{ selectedMovie.title }}</h2>
+    </div>
+
+    <article class="selected-card">
+      <div class="poster-shell large" [ngStyle]="posterStyle(selectedMovie)">
+        <span *ngIf="!selectedMovie.posterUrl">Poster</span>
+      </div>
+      <div class="selected-copy">
+        <div class="meta-row">
+          <span>{{ selectedMovie.releaseDate || 'Release date pending' }}</span>
+          <span>Rating {{ selectedMovie.voteAverage || 0 }}</span>
+        </div>
+        <p>{{ selectedMovie.overview || 'Overview will appear here from the dataset.' }}</p>
+      </div>
+    </article>
+  </section>
+
+  <section class="results-section" *ngIf="recommendations.length && !loading">
+    <div class="section-head">
+      <p class="section-kicker">Recommended Movies For You</p>
+      <h2>{{ selectedMovieTitle }}</h2>
+    </div>
+
+    <div class="results-grid">
+      <article class="movie-card" *ngFor="let movie of recommendations; trackBy: trackMovie">
+        <div class="poster-shell" [ngStyle]="posterStyle(movie)">
+          <span *ngIf="!movie.posterUrl">Poster</span>
+        </div>
+
+        <div class="movie-copy">
+          <h3>{{ movie.title }}</h3>
+          <div class="meta-row">
+            <span>{{ movie.releaseDate || 'TBA' }}</span>
+            <span>Rating {{ movie.voteAverage || 0 }}</span>
+          </div>
+          <p>{{ movie.overview || 'Overview will appear here from the dataset.' }}</p>
+          <button type="button" (click)="openMovie(movie)">Open Details</button>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="results-section" *ngIf="quickMatches.length && !loading">
+    <div class="section-head">
+      <p class="section-kicker">Closest Matches</p>
+      <h2>Pick one or keep browsing</h2>
+    </div>
+
+    <div class="suggestion-row">
+      <button type="button" *ngFor="let movie of quickMatches; trackBy: trackMovie" (click)="useSuggestion(movie)">
+        {{ movie.title }}
+      </button>
+    </div>
+  </section>
+</section>
