@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, forkJoin, of } from 'rxjs';
-import { map, shareReplay, switchMap } from 'rxjs/operators';
+import { catchError, map, shareReplay, switchMap, timeout } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import {
   MovieDetailResponse,
@@ -17,10 +17,14 @@ import {
 export class MovieService {
   private http = inject(HttpClient);
   private api = `${environment.apiUrl}/api/movies`;
+  private omdbApiKey = String((environment as any).omdbApiKey || '').trim();
+  private omdbApiUrl = String((environment as any).omdbApiUrl || 'https://www.omdbapi.com').replace(/\/+$/, '');
+  private readonly posterLookupTimeoutMs = 2500;
   private searchCache = new Map<string, Observable<MovieSearchResponse>>();
   private recommendationCache = new Map<string, Observable<MovieRecommendationResponse>>();
   private movieListCache = new Map<string, Observable<MovieListResponse>>();
   private movieByIdCache = new Map<string, Observable<MovieDetailResponse>>();
+  private moviePosterCache = new Map<string, MovieRecommendationItem>();
 
   getMovies(query = '', page = 1, limit = 12): Observable<MovieListResponse> {
     const key = JSON.stringify(['list', query.trim().toLowerCase(), page, limit]);
@@ -130,6 +134,61 @@ export class MovieService {
 
   private enrichMovie(movie: MovieRecommendationItem): Observable<MovieRecommendationItem> {
     if (!movie) return of({} as MovieRecommendationItem);
-    return of(movie);
+    if (movie.posterUrl) return of(movie);
+
+    const title = String(movie.title || '').trim();
+    const year = this.extractYear(movie.releaseDate);
+    const cacheKey = `${title.toLowerCase()}|${year || 'na'}`;
+
+    if (!title || !this.omdbApiKey) {
+      return of(movie);
+    }
+
+    const cached = this.moviePosterCache.get(cacheKey);
+    if (cached) {
+      return of({ ...movie, ...cached });
+    }
+
+    let params = new HttpParams()
+      .set('apikey', this.omdbApiKey)
+      .set('t', title);
+
+    if (year) {
+      params = params.set('y', year);
+    }
+
+    return this.http.get<any>(this.omdbApiUrl, { params }).pipe(
+      timeout(this.posterLookupTimeoutMs),
+      map((response) => {
+        const posterUrl = this.normalizeOmdbPosterUrl(response?.Poster);
+        const enriched: MovieRecommendationItem = {
+          ...movie,
+          posterPath: movie.posterPath || posterUrl,
+          posterUrl: posterUrl || movie.posterUrl || '',
+          hasPoster: !!(posterUrl || movie.posterUrl),
+          releaseDate: movie.releaseDate || String(response?.Released || ''),
+          voteAverage: movie.voteAverage || Number(response?.imdbRating || 0),
+          popularity:
+            movie.popularity ||
+            Number(String(response?.imdbVotes || '').replace(/,/g, '') || 0),
+        };
+
+        this.moviePosterCache.set(cacheKey, enriched);
+        return enriched;
+      }),
+      catchError(() => of(movie))
+    );
+  }
+
+  private extractYear(value: string): string {
+    const text = String(value || '').trim();
+    const match = text.match(/\b(19|20)\d{2}\b/);
+    return match ? match[0] : '';
+  }
+
+  private normalizeOmdbPosterUrl(value: any): string {
+    const poster = String(value || '').trim();
+    if (!poster || /^n\/a$/i.test(poster)) return '';
+    return poster;
   }
 }

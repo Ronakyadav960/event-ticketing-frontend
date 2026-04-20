@@ -10,19 +10,14 @@ import { environment } from '../../environments/environment';
   providedIn: 'root',
 })
 export class EventService {
-
-  // ✅ Single API (role handled in backend middleware)
   private API = `${environment.apiUrl}/api/events`;
-  private tmdbApiKey = String(environment.tmdbApiKey || '').trim();
-  private tmdbImageBaseUrl = String(environment.tmdbImageBaseUrl || 'https://image.tmdb.org/t/p/w500').replace(/\/+$/, '');
+  private omdbApiKey = String((environment as any).omdbApiKey || '').trim();
+  private omdbApiUrl = String((environment as any).omdbApiUrl || 'https://www.omdbapi.com').replace(/\/+$/, '');
   private readonly posterLookupTimeoutMs = 2500;
   private moviePosterCache = new Map<string, string>();
 
   constructor(private http: HttpClient) {}
 
-  // =========================
-  // AUTH HEADERS
-  // =========================
   private getAuthHeadersJson() {
     const token = localStorage.getItem('token');
     return {
@@ -42,9 +37,6 @@ export class EventService {
     };
   }
 
-  // =========================
-  // NORMALIZATION
-  // =========================
   private unwrap(res: any): any {
     return res?.event ?? res?.data ?? res;
   }
@@ -94,12 +86,16 @@ export class EventService {
       } as Event);
     }
 
-    const movieId = String((event as any)?.sourceMovieId || '').trim();
-    if (!movieId || !this.tmdbApiKey) {
+    const lookupTitle = this.resolvePosterLookupTitle(event, movieMeta);
+    const lookupYear = this.resolvePosterLookupYear(event, movieMeta);
+    const imdbId = String(movieMeta?.imdbId || '').trim();
+    const cacheKey = this.buildPosterCacheKey(lookupTitle, lookupYear, imdbId);
+
+    if (!cacheKey || !this.omdbApiKey) {
       return of(event);
     }
 
-    const fromCache = this.moviePosterCache.get(movieId);
+    const fromCache = this.moviePosterCache.get(cacheKey);
     if (fromCache) {
       return of({
         ...(event as any),
@@ -108,29 +104,68 @@ export class EventService {
       } as Event);
     }
 
-    const params = new HttpParams().set('api_key', this.tmdbApiKey);
-    return this.http.get<any>(`https://api.themoviedb.org/3/movie/${encodeURIComponent(movieId)}`, { params }).pipe(
+    let params = new HttpParams().set('apikey', this.omdbApiKey);
+    if (imdbId) {
+      params = params.set('i', imdbId);
+    } else {
+      params = params.set('t', lookupTitle);
+      if (lookupYear) params = params.set('y', lookupYear);
+    }
+
+    return this.http.get<any>(this.omdbApiUrl, { params }).pipe(
       timeout(this.posterLookupTimeoutMs),
       map((response) => {
-        const posterPath = String(response?.poster_path || '').trim();
-        const posterUrl = posterPath ? `${this.tmdbImageBaseUrl}/${posterPath.replace(/^\/+/, '')}` : '';
-        if (posterUrl) this.moviePosterCache.set(movieId, posterUrl);
+        const posterUrl = this.normalizeOmdbPosterUrl(response?.Poster);
+        if (posterUrl) this.moviePosterCache.set(cacheKey, posterUrl);
 
         return {
           ...(event as any),
           imageUrl: posterUrl || existingImage,
           movieMeta: {
             ...movieMeta,
-            posterPath: posterPath || movieMeta?.posterPath || '',
+            posterPath: posterUrl || movieMeta?.posterPath || '',
             posterUrl: posterUrl || movieMeta?.posterUrl || '',
-            releaseDate: movieMeta?.releaseDate || String(response?.release_date || ''),
-            voteAverage: movieMeta?.voteAverage || Number(response?.vote_average || 0),
-            popularity: movieMeta?.popularity || Number(response?.popularity || 0),
+            imdbId: imdbId || String(response?.imdbID || ''),
+            releaseDate: movieMeta?.releaseDate || String(response?.Released || ''),
+            voteAverage: movieMeta?.voteAverage || Number(response?.imdbRating || 0),
+            popularity:
+              movieMeta?.popularity ||
+              Number(String(response?.imdbVotes || '').replace(/,/g, '') || 0),
           },
         } as Event;
       }),
       catchError(() => of(event))
     );
+  }
+
+  private resolvePosterLookupTitle(event: Event, movieMeta: any): string {
+    return String(
+      movieMeta?.title ||
+      movieMeta?.movieTitle ||
+      (event as any)?.movieTitle ||
+      event?.title ||
+      ''
+    ).trim();
+  }
+
+  private resolvePosterLookupYear(event: Event, movieMeta: any): string {
+    const releaseDate = String(movieMeta?.releaseDate || '').trim();
+    const eventDate = String((event as any)?.date || '').trim();
+    const raw = releaseDate || eventDate;
+    const match = raw.match(/\b(19|20)\d{2}\b/);
+    return match ? match[0] : '';
+  }
+
+  private buildPosterCacheKey(title: string, year: string, imdbId: string): string {
+    if (imdbId) return `imdb:${imdbId.toLowerCase()}`;
+    if (!title) return '';
+    return `title:${title.toLowerCase()}|${year || 'na'}`;
+  }
+
+  private normalizeOmdbPosterUrl(value: any): string {
+    const poster = String(value || '').trim();
+    if (!poster || /^n\/a$/i.test(poster)) return '';
+    return this.normalizeImageUrl(poster);
   }
 
   private enrichEventPosters(events: Event[]): Observable<Event[]> {
@@ -140,10 +175,13 @@ export class EventService {
     );
   }
 
-  // =========================
-  // PUBLIC ROUTES
-  // =========================
-  getAllEvents(category?: string, page?: number, limit?: number, query?: string, sourceMovieId?: string): Observable<{
+  getAllEvents(
+    category?: string,
+    page?: number,
+    limit?: number,
+    query?: string,
+    sourceMovieId?: string
+  ): Observable<{
     data: Event[];
     page: number;
     limit: number;
@@ -158,14 +196,14 @@ export class EventService {
     if (sourceMovieId?.trim()) params = params.set('sourceMovieId', sourceMovieId.trim());
 
     return this.http.get<any>(this.API, { params }).pipe(
-      map(res => {
+      map((res) => {
         const list = Array.isArray(res)
           ? res
           : Array.isArray(res?.events)
-          ? res.events
-          : Array.isArray(res?.data)
-          ? res.data
-          : [];
+            ? res.events
+            : Array.isArray(res?.data)
+              ? res.data
+              : [];
 
         const data = list.map((e: any) => this.normalizeEvent(e));
 
@@ -187,11 +225,7 @@ export class EventService {
           totalPages: Number(res?.totalPages) || 1,
         };
       }),
-      switchMap((response) =>
-        this.enrichEventPosters(response.data).pipe(
-          map((data) => ({ ...response, data }))
-        )
-      )
+      switchMap((response) => this.enrichEventPosters(response.data).pipe(map((data) => ({ ...response, data }))))
     );
   }
 
@@ -210,82 +244,52 @@ export class EventService {
     return this.http
       .get<any>(`${this.API}/${id}`)
       .pipe(
-        map(res => this.normalizeEvent(res)),
+        map((res) => this.normalizeEvent(res)),
         switchMap((event) => this.enrichEventPoster(event) as Observable<Event>)
       );
   }
 
-  // =========================
-  // CREATE
-  // =========================
   createEvent(event: Event | FormData): Observable<Event> {
     const isFormData = event instanceof FormData;
-    const options = isFormData
-      ? this.getAuthHeadersFormData()
-      : this.getAuthHeadersJson();
+    const options = isFormData ? this.getAuthHeadersFormData() : this.getAuthHeadersJson();
 
     return this.http
       .post<any>(this.API, event as any, options)
-      .pipe(map(res => this.normalizeEvent(res)));
+      .pipe(map((res) => this.normalizeEvent(res)));
   }
 
-  // =========================
-  // UPDATE
-  // =========================
   updateEvent(id: string, event: Event | FormData): Observable<Event> {
     const isFormData = event instanceof FormData;
-    const options = isFormData
-      ? this.getAuthHeadersFormData()
-      : this.getAuthHeadersJson();
+    const options = isFormData ? this.getAuthHeadersFormData() : this.getAuthHeadersJson();
 
     return this.http
       .put<any>(`${this.API}/${id}`, event as any, options)
-      .pipe(map(res => this.normalizeEvent(res)));
+      .pipe(map((res) => this.normalizeEvent(res)));
   }
 
-  // =========================
-  // DELETE
-  // =========================
   deleteEvent(id: string): Observable<any> {
-    return this.http.delete(
-      `${this.API}/${id}`,
-      this.getAuthHeadersJson()
-    );
+    return this.http.delete(`${this.API}/${id}`, this.getAuthHeadersJson());
   }
 
-  // =========================
-  // BOOK SEATS
-  // =========================
   bookSeats(id: string, seats: number): Observable<any> {
-    return this.http.post(
-      `${this.API}/${id}/book`,
-      { seats },
-      this.getAuthHeadersJson()
-    );
+    return this.http.post(`${this.API}/${id}/book`, { seats }, this.getAuthHeadersJson());
   }
 
-  // =========================
-  // CATEGORIES
-  // =========================
   getCategories(): Observable<string[]> {
     return this.http.get<any>(`${this.API}/categories`).pipe(
-      map(res => {
+      map((res) => {
         const list = Array.isArray(res) ? res : res?.categories;
         return Array.isArray(list) ? list : [];
       })
     );
   }
 
-  // =========================
-  // HELPER: IMAGE URL
-  // =========================
   getEventImageUrl(e: any): string {
     const base = environment.apiUrl.replace(/\/+$/, '');
     const id = e?.id || e?._id;
 
     if (e?.imageUrl) return this.normalizeImageUrl(e.imageUrl);
 
-    // If backend doesn't provide an imageUrl, treat as "no image" unless we know a file exists.
     if (e?.imageFileId) {
       return id ? `${base}/api/events/${id}/image` : '';
     }
@@ -293,11 +297,3 @@ export class EventService {
     return '';
   }
 }
-
-
-
-
-
-
-
-
