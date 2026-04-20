@@ -272,6 +272,10 @@
   gap: 16px;
 }
 
+.events-discovery{
+  margin-bottom: 44px;
+}
+
 .matching-events-head{
   margin-top: 22px;
 }
@@ -432,6 +436,7 @@
 @media (max-width: 520px){
   .grid{ grid-template-columns: 1fr; }
 }
+
 
 @media (max-width: 720px){
   .movie-discovery-header{

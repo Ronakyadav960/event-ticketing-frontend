@@ -147,7 +147,7 @@
     </div>
   </section>
 
-  <section class="movie-discovery" *ngIf="!movieSearchActive && categoryFilter === 'all'">
+  <section class="movie-discovery" *ngIf="!movieSearchActive && categoryFilter === 'all' && showMovieCatalog">
     <div class="movie-discovery-header">
       <div>
         <p class="movie-kicker">Movie Catalog</p>
@@ -178,52 +178,54 @@
     <div *ngIf="movieHasMore && !movieListLoading" #movieSentinel class="infinite-sentinel"></div>
   </section>
 
-  <!-- Grid -->
-  <section class="grid" *ngIf="!loading">
-    <div class="card" [ngClass]="eventCardClass(e)" *ngFor="let e of filtered" (click)="openEvent(e)">
-      <div class="poster">
-        <img *ngIf="shouldShowImg(e); else noImg" [src]="imgUrl(e)" (error)="onImgError(e)" alt="poster" />
-        <ng-template #noImg>
-          <div class="noimg">No Image</div>
-        </ng-template>
+  <!-- Events Grid (same layout behavior as Movies grid) -->
+  <section class="movie-discovery events-discovery" *ngIf="!loading">
+    <div class="movie-grid event-grid">
+      <div class="card" [ngClass]="eventCardClass(e)" *ngFor="let e of filtered" (click)="openEvent(e)">
+        <div class="poster">
+          <img *ngIf="shouldShowImg(e); else noImg" [src]="imgUrl(e)" (error)="onImgError(e)" alt="poster" />
+          <ng-template #noImg>
+            <div class="noimg">No Image</div>
+          </ng-template>
 
-        <div class="badge"
-             [class.up]="statusOf(e)==='Upcoming'"
-             [class.past]="statusOf(e)==='Past'"
-             [class.so]="statusOf(e)==='Sold Out'">
-          {{ statusOf(e) }}
-        </div>
-      </div>
-
-      <div class="info">
-        <div class="title">{{ e.title }}</div>
-
-        <div class="meta">
-          <span class="dot"></span>
-          <span>{{ e.venue || '-' }}</span>
-        </div>
-
-        <div class="meta2">
-          <span>{{ e.date | date:'mediumDate' }}</span>
-          <span class="sep">|</span>
-          <span>{{ e.date | date:'shortTime' }}</span>
-        </div>
-
-        <div class="bottom">
-          <div class="price">Rs.{{ e.price ?? 0 }}</div>
-          <div class="seats">
-            {{ remainingSeats(e) }} seats left
+          <div class="badge"
+               [class.up]="statusOf(e)==='Upcoming'"
+               [class.past]="statusOf(e)==='Past'"
+               [class.so]="statusOf(e)==='Sold Out'">
+            {{ statusOf(e) }}
           </div>
         </div>
 
-        <button class="cta" type="button" (click)="$event.stopPropagation(); openEvent(e)">
-          View & Book
-        </button>
-      </div>
-    </div>
+        <div class="info">
+          <div class="title">{{ e.title }}</div>
 
-    <div *ngIf="filtered.length === 0" class="empty">
-      No events found. Try changing filters.
+          <div class="meta">
+            <span class="dot"></span>
+            <span>{{ e.venue || '-' }}</span>
+          </div>
+
+          <div class="meta2">
+            <span>{{ e.date | date:'mediumDate' }}</span>
+            <span class="sep">|</span>
+            <span>{{ e.date | date:'shortTime' }}</span>
+          </div>
+
+          <div class="bottom">
+            <div class="price">Rs.{{ e.price ?? 0 }}</div>
+            <div class="seats">
+              {{ remainingSeats(e) }} seats left
+            </div>
+          </div>
+
+          <button class="cta" type="button" (click)="$event.stopPropagation(); openEvent(e)">
+            View & Book
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="filtered.length === 0" class="empty">
+        No events found. Try changing filters.
+      </div>
     </div>
   </section>
 
@@ -232,5 +234,3 @@
   
 
 </div>     
-
-

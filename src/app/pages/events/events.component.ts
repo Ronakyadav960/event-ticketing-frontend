@@ -25,6 +25,9 @@ export class EventsComponent implements OnInit, OnDestroy {
   private movieSearchToken = 0;
   private matchedEventsToken = 0;
 
+  // Home/all view should show event cards (not the movie catalog grid)
+  showMovieCatalog = false;
+
   loading = false;
   loadingMore = false;
   error = '';
@@ -77,7 +80,7 @@ export class EventsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadCategories();
     this.fetchEvents('', true);
-    this.loadMovies(true);
+    if (this.showMovieCatalog) this.loadMovies(true);
 
     this.searchInput$
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
@@ -320,7 +323,7 @@ export class EventsComponent implements OnInit, OnDestroy {
       this.matchedEventsLoading = false;
       this.matchedEventsError = '';
       this.matchedEvents = [];
-      if (this.categoryFilter === 'all') {
+      if (this.categoryFilter === 'all' && this.showMovieCatalog) {
         this.loadMovies(true);
       }
       return;
@@ -462,7 +465,7 @@ export class EventsComponent implements OnInit, OnDestroy {
     this.matchedEvents = [];
     this.searchError = '';
 
-    if (this.categoryFilter === 'all') {
+    if (this.categoryFilter === 'all' && this.showMovieCatalog) {
       this.loadMovies(true);
       return;
     }
